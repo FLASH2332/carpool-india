@@ -24,7 +24,9 @@ const schema = a.schema({
       name: a.string(),
       phone: a.string(),
       email: a.email(),
-      // orgId, totals and points are read-only for clients; Lambdas set them.
+      // orgId is read-only for clients; Lambdas set it. Totals and points can
+      // only be written by the owner on create (so the default 0 applies), then
+      // by Lambdas.
       orgId: a
         .id()
         .authorization((allow) => [allow.authenticated().to(['read'])]),
@@ -45,19 +47,31 @@ const schema = a.schema({
       totalKm: a
         .float()
         .default(0)
-        .authorization((allow) => [allow.authenticated().to(['read'])]),
+        .authorization((allow) => [
+          allow.authenticated().to(['read']),
+          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
+        ]),
       totalKgCO2: a
         .float()
         .default(0)
-        .authorization((allow) => [allow.authenticated().to(['read'])]),
+        .authorization((allow) => [
+          allow.authenticated().to(['read']),
+          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
+        ]),
       totalRupees: a
         .float()
         .default(0)
-        .authorization((allow) => [allow.authenticated().to(['read'])]),
+        .authorization((allow) => [
+          allow.authenticated().to(['read']),
+          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
+        ]),
       points: a
         .integer()
         .default(0)
-        .authorization((allow) => [allow.authenticated().to(['read'])]),
+        .authorization((allow) => [
+          allow.authenticated().to(['read']),
+          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
+        ]),
     })
     .identifier(['userId'])
     .authorization((allow) => [
