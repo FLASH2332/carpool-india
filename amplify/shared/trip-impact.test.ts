@@ -7,7 +7,7 @@ import {
   fuelShare,
   rupeesSaved,
   tripPoints,
-} from './impact';
+} from './trip-impact';
 
 test('emissionFactor uses the table, and the default for no vehicle', () => {
   assert.equal(emissionFactor({ vehicleType: 'SEDAN', fuel: 'DIESEL' }), 0.141);

@@ -17,20 +17,26 @@
     "seed:aqi": "tsx scripts/seed-aqi.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1149.0",
     "@aws-sdk/client-location": "^3.1149.0",
+    "@aws-sdk/client-s3": "^3.1149.0",
+    "@aws-sdk/lib-dynamodb": "^3.1149.0",
+    "@aws-sdk/s3-request-presigner": "^3.1149.0",
     "@aws/amazon-location-utilities-auth-helper": "^1.3.3",
+    "@turf/turf": "^7.4.0",
     "aws-amplify": "^6.22.1",
     "maplibre-gl": "^6.13.0",
+    "ngeohash": "^0.6.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.25.1",
     "@aws-amplify/backend-cli": "^1.10.0",
-    "@aws-sdk/client-dynamodb": "^3.1149.0",
     "@aws-sdk/client-ssm": "^3.1149.0",
     "@aws-sdk/client-sts": "^3.1149.0",
     "@types/aws-lambda": "^8.10.164",
+    "@types/ngeohash": "^0.6.8",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
