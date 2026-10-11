@@ -1,7 +1,7 @@
 # GreenCommute India
 
 Office and college carpooling. React + Vite + TypeScript frontend, AWS Amplify Gen 2 backend
-(Cognito, AppSync + DynamoDB; Lambda workflows pending) in `ap-south-1`.
+(Cognito, AppSync + DynamoDB and Lambda workflows) in `ap-south-1`.
 
 [Hosted demo](https://demo.dl7lvp454dd36.amplifyapp.com/) — frontend hosted in Kapil's Sydney project, connected to Flash's Mumbai sandbox. This is a manual deployment; GitHub auto-deployment is not connected yet.
 
@@ -10,13 +10,17 @@ requests, a live-trip panel, summaries and My Impact. Explore the labelled brows
 demo to click through a full rider/driver journey. Cognito and existing AppSync model
 reads/profile writes connect to Flash's sandbox via `amplify_outputs.json`.
 
-**Cloud workflow status:** the current backend is model/auth scaffolding. It does not
-yet implement the Lambda ride workflows, Amazon Location maps or organisation access
-boundaries from the feature spec. Real ride mutations are blocked until those exist;
-demo data is never represented as a working two-device cloud ride.
+**Cloud workflow status:** the new handoff includes server ride operations. Profile
+setup and driver actions are wired; real search/publishing need Amazon Location map
+coordinates and permitted test identities. Organisation access and completion safety
+still need backend fixes. A live two-device workflow has not been verified.
+
+My Impact includes CO₂ carbon points, milestone badges and a monthly community
+leaderboard, separate from backend ride points.
 
 - [AWS / Builder ID / Amplify Hosting setup](docs/AWS_SETUP.md)
 - [Backend and maps handoff, demo steps and limitations](docs/BACKEND_HANDOFF.md)
+- [Team responsibilities and validation status](docs/TEAM_HANDOVER.md)
 
 Install with `npm ci`, copy Flash's generated outputs to the repository root, then
 run `npm run dev`. For Hosting, supply `AMPLIFY_OUTPUTS_JSON` as described in the setup

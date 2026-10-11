@@ -16,6 +16,9 @@ try {
     throw Error(
       "Expected valid Amplify Gen 2 Auth and Data outputs for Mumbai (ap-south-1).",
     );
+  for (const name of ["ensureProfile", "indexTrip", "requestSeat", "respondToRequest", "startTrip", "completeTrip"])
+    if (!config.data.model_introspection.mutations?.[name]) throw Error(`Backend outputs are missing ${name}. Ask Flash for fresh outputs.`);
+  if (!config.data.model_introspection.queries?.searchTrips) throw Error("Backend outputs are missing searchTrips. Ask Flash for fresh outputs.");
   if (supplied) writeFileSync(path, JSON.stringify(config, null, 2));
   console.log("Amplify Auth and Data configuration validated for Mumbai.");
 } catch (error) {

@@ -1132,3 +1132,21 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+/* Rewards stay readable on both the desktop dashboard and a narrow phone. */
+.rewards-grid { display:grid; grid-template-columns: 1fr 1.25fr; gap:24px; margin:24px 0; }
+.carbon-reward h2 { font-size:2rem; margin:18px 0; }
+.carbon-reward h2 span { font-size:1rem; }
+.reward-progress { height:10px; border-radius:20px; overflow:hidden; background:#e8ede5; }
+.reward-progress span { display:block; height:100%; background:#39745b; transition:width .3s; }
+.badges { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:18px 0; }
+.badge { padding:12px; border:1px solid #dedfd6; border-radius:12px; color:#686f68; }
+.badge.earned { background:#edf6e9; border-color:#92b58a; color:#28523b; }
+.badge small,.leader-list small { display:block; font-size:.75rem; margin-top:5px; color:#68756b; }
+.leaderboard-heading { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.leader-list { list-style:none; padding:0; margin:16px 0; }
+.leader-list li { display:flex; align-items:center; gap:12px; padding:14px 10px; border-bottom:1px solid #e6e9e1; }
+.leader-list .current-member { background:#eef5e9; border-radius:10px; }
+.leader-list .rank { color:#56765f; min-width:22px; font-weight:700; }
+.leader-list li>div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.leader-list strong { text-align:right; }
+@media(max-width:800px) { .rewards-grid { grid-template-columns:1fr; } }

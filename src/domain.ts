@@ -260,7 +260,7 @@ export function completeDemo(store: Store, id: string, userId: string): Store {
     kmShared: riders.length ? trip.routeKm : 0,
     kgCO2: 0,
     rupees: riders.length * trip.shareRupees,
-    points: riders.length ? 10 * double : 0,
+    points: riders.length * 10 * double,
     role: "DRIVER",
   });
   return {

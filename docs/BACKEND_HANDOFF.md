@@ -1,52 +1,52 @@
-# Frontend integration handoff
+# Backend integration handoff
 
-Kapil's React frontend is implemented on the existing React/Vite starter. `amplify_outputs.json` from Flash is configured for Mumbai. The current schema has seven models (not the eight in the feature spec); no LocationPing model exists yet.
+Reviewed Flash's supplied handoff HTML, new amplify_outputs.json and source through c79fe9b on 11 October 2026. The handoff describes a deployed Mumbai sandbox; its old note about unpushed ride steps is superseded by current main. Config validation does not prove a live two-device test passed.
 
-Flash's commits `c008f11` and `2862360` add `ensureProfile`, `indexTrip` and `searchTrips` in source and are merged into this branch. The supplied outputs do not contain these custom operations, so deployment and client integration are still pending. `ensureProfile` currently accepts only the placeholder domains in `amplify/shared/factors.ts`; real team domains need backend configuration. `indexTrip` and `searchTrips` need real coordinates/route state from the map integration. Preserve the Mumbai backend; Sydney hosting must not deploy or migrate it. See [TEAM_HANDOVER.md](TEAM_HANDOVER.md) for parallel tasks and integration order.
+## Integrated frontend
 
-## Working against the supplied sandbox
+- ensureProfile assigns organisation/city after sign-in. Owner saves update personal/vehicle/UPI fields without sending organisation or totals.
+- respondToRequest, startTrip and completeTrip drive driver actions. Completion failures refresh and warn against blind retries.
+- Load owned trips, participant requests and their referenced trips, avoiding a download of all profiles/requests. Request subscriptions refresh seats because direct DynamoDB seat writes do not emit Trip events.
+- Foreground driver GPS updates latest Trip position at most every five seconds. LocationPing/history is absent from the current contract.
+- searchCloud, requestCloud and publishCloud provide typed map adapters; real search/publishing remain gated until map coordinates exist. Publishing validates the route line, creates DRAFT then indexes it.
+- Driver displays completion's final per-rider shares for this session. Trip.shareRupees is a published estimate, not a persistent rider settlement.
+- orgReport exists with OrgAdmins authorization; no frontend administrator report screen.
 
-- Cognito email sign-up, code confirmation/resend, sign-in, password recovery, sign-out and session restoration.
-- Owner profile create/update. The client does not write organisation membership or impact totals.
-- AppSync reads for trips, the current user's requests and impact entries, and AQI.
-- Trip/request/impact/AQI subscriptions refresh the screens. Subscription failures display a refresh prompt.
-- Explicitly enabled foreground GPS on an already-active owned trip writes the latest position at most once per five seconds. The current backend supports updating those Trip fields, but not history/TTL.
+## WinterSun map/data contract
 
-## Flash / JD: remaining production contracts
+Search needs pickupLat/pickupLng/dropLat/dropLng and ISO departAt. Preserve search result sharedKm and pickup/drop for requestCloud, with labels. Offering needs actual start/end coordinates, a driving line as [longitude, latitude][] and road distance in km. Never publish the fixed-coordinate demo.
 
-Please add server operations and regenerate outputs before wiring the blocked frontend actions in `src/App.tsx`. Names below come from the supplied feature spec; they are a proposed contract, not operations that already exist.
+The SVG is illustrative. Live position is coordinates/time rather than a moving map marker. Fuel prices and demo AQI are placeholders; document provenance and missing-data behavior before calling them live.
 
-| Operation                                      | Minimum behavior                                                                                                                                                                                            |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| createTrip                                     | Validate authenticated driver and organisation; calculate actual route distance, line, fuel share and TripCell index; return Trip. Do not trust client driver IDs, price or coordinates without validation. |
-| searchTrips                                    | Route-near pickup/drop, pickup-before-drop, ±30 minutes, free seats, organisation isolation; return trips with walking distance sorted ascending.                                                           |
-| requestRide                                    | Validate rider, trip, duplicate request and pickup/drop; create PENDING request. Never derive identity from user-supplied riderId.                                                                          |
-| acceptRequest / declineRequest / cancelRequest | Authorize participant; accept request and decrement seat atomically with conditional writes; enforce legal status transitions and idempotency.                                                              |
-| startTrip / completeTrip                       | Driver-only transitions; completed impact and totals computed once server-side, using factors and actual accepted riders.                                                                                   |
-| updateLocation                                 | Restrict to active driver/accepted riders; store latest position plus short-lived LocationPing history with TTL.                                                                                            |
-| generateReport                                 | Optional E3; authorise org admins and issue a short-lived CSV link.                                                                                                                                         |
+## Gamification
 
-**Authorization gap:** the current schema grants all signed-in users read access to profiles (including phone/UPI), requests, impact and trips. A client-side organisation filter is not an access boundary. Add participant and organisation-based backend rules/resolvers before using real personal data. The new `ensureProfile` source resolves organisation membership from an email allowlist, but deployment is unverified and owner model creation still needs enforcement. Pre-sign-up domain checks are not implemented; existing output has no OrgAdmins group. Owner Trip updates currently allow seat/status/organisation changes, so protect server-managed fields when adding workflows.
+Original fixed ride points remain: 5 for rider, 10 per shared rider for driver, doubled on bad-air days. Added carbon points = floor(10 × reported CO₂ kg), lifetime 1/5/10/25 kg milestones and a monthly top-10 organisation leaderboard.
 
-## Ashwin: map and data components
+Live rankings use paginated ImpactEntry org/month index reads and only userId/name/orgId profile fields. No phone/email/UPI is fetched for standings. Duplicate trip/user attribution is ignored; carbon points do not modify backend totals.
 
-Replace `RouteMap` with your Amazon Location map and autocomplete. Route state needs `[longitude, latitude][]`, road distance, duration, pickup and drop coordinates/labels. The existing SVG is an explicitly illustrative diagram; its car marker is not georeferenced. Location changes currently appear as coordinates/time, not a moving map. Demo offered trips use fixed Bengaluru coordinates irrespective of the labels entered. Restrict demo geography or replace this with real map state before the recording of a live AWS ride.
+The backend also attributes riders' avoided emissions to the driver. Do not sum rankings as net organisation savings. Demo attributes avoided emissions only to riders, so driver carbon attribution differs.
 
-AQI demo values and fuel prices are seeded/placeholder values. Today's AQI is selected by date in Asia/Kolkata; a missing reading is not represented as live data. Demo emissions use the default rider hatchback factor, assume zero detour, and attribute avoided CO2 to the rider only to avoid double counting. Replace with server-calculated per-person attribution before production. The demo driver's rupees are fuel contributions received rather than a verified fuel-saving estimate.
+## Flash: source findings to address
 
-## Demo walkthrough
+1. Organisation privacy: authenticated model reads are broad. Client filters/domain checks do not enforce isolation. Restrict profiles, requests, impact and trips to org/participants; protect server-managed owner fields.
+2. Acceptance: respondToRequest reads PENDING, decrements seats conditionally, then updates request without a transaction. Concurrent acceptance of the same request can consume two seats. Condition request status, Trip OPEN and seats in one transaction.
+3. Completion: completeTrip marks DONE before all impact/profile writes. Partial failures cannot resume; concurrent calls and profile read-modify-write can duplicate/lose totals. Add conditional transitions, recoverable idempotent per-participant writes and atomic totals.
+4. Requests: validate sharedKm and pickup/drop against the route server-side; make duplicate requests conditionally unique.
+5. Settlements: persist final rider amount/payee with participant access so refresh/another device can recover it.
+6. Search/data: handoff notes missed north/south routes around 0.6–1 km geohash coverage. Verify boundaries. No live AQI writer is confirmed.
 
-1. Choose **Explore the interactive demo**; Kapil starts as a rider.
-2. Request Ashwin's Indiranagar → Electronic City trip.
-3. Switch the top-right demo person to Ashwin, open My rides and accept.
-4. View the trip, start it, optionally simulate location, then end it.
-5. Switch to Kapil; open My rides → View trip and My impact.
-6. Switch to JD or Ashwin to offer another ride, or add a vehicle to Kapil's profile.
+No backend resources were recreated, migrated or deployed by frontend integration.
 
-The demo runs entirely in one browser's local storage. It is not a two-phone AppSync demo. Real-account workflow buttons are blocked while the server operations are missing. No payments are collected in demo mode.
+## Hardcoded organisation suggestions
 
-## Validation before submission
+For the hackathon, keep a small explicit allowlist but replace example domains with real approved test domains. Keep pre-signup and ensureProfile mappings consistent. Do not add Gmail simply to bypass restrictions without agreeing product scope.
 
-Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Then test real verified driver/rider accounts on two devices, subscription updates, last-seat concurrent acceptance, organisation access rejection, GPS consent/errors and completion idempotency after the server operations are implemented. Reports and recurring commutes remain optional and are not implemented in this frontend.
+If public users are intended, a separate Public organisation is a viable choice: public users share with each other while college/company trips remain private. This requires backend access enforcement; current broad model reads defeat isolation.
 
-Backend type checking additionally requires Amplify-generated `$amplify/env/ensure-profile`, `$amplify/env/index-trip` and `$amplify/env/search-trips` declarations from the backend owner's environment. A frontend checkout without those generated files can run `npx tsc -b`, tests, lint and build; do not create a second sandbox merely to generate them.
+Later, use separately provisioned DynamoDB or SSM domain → org configuration with narrowly scoped signup-function read access. Avoid making auth provisioning depend on data that itself depends on auth. Add an approval process for organisation/domain ownership.
+
+## Demo and validation
+
+Explore demo → request Ashwin's ride → switch to Ashwin → accept → view/start/end → switch to Kapil → My impact. All state stays in one browser; no payments collected.
+
+Run npm test, npm run lint and npm run build. Full npm run typecheck also needs generated backend environment declarations. Flash must provide permitted verified test users for live two-device validation, last-seat races, repeated completion, cross-org rejection, GPS errors and final settlement recovery.

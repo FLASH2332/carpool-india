@@ -11,7 +11,7 @@
     "sandbox": "ampx sandbox --profile greencommute",
     "preview": "vite preview",
     "prebuild": "node scripts/prepare-outputs.mjs",
-    "test": "tsx --test src/domain.test.ts"
+    "test": "tsx --test src/domain.test.ts src/rewards.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1149.0",

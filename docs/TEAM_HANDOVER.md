@@ -1,43 +1,36 @@
-# GreenCommute India — Kapil's handover
+# GreenCommute India — team handover
 
-Status checked on 11 October 2026. For Flash / JD (`FLASH2332`) and WinterSun / Ashwin (`WinterSun23`). The feature specification assigns backend, React frontend, and maps/data/video by layer.
+Updated 11 October 2026 for Flash / JD (FLASH2332) and WinterSun / Ashwin (WinterSun23). Replaces the earlier handover.
 
 ## Kapil's delivered work
 
-- React/TypeScript frontend on `kapil/react-frontend`, in [draft PR #1](https://github.com/FLASH2332/carpool-india/pull/1). Not merged into main.
-- Live frontend: https://demo.dl7lvp454dd36.amplifyapp.com/ . Amplify app `greencommute-india`, branch `demo`, Sydney (`ap-southeast-2`); deployment job 2 succeeded. Manual ZIP deployment; GitHub automatic deployment remains unconnected.
-- Cognito auth screens/session handling, profile/vehicle settings, cloud reads/subscriptions, foreground GPS on an already-active owned trip, summaries/impact and UPI links. Real auth/profile and the full two-device cloud flow have not been verified end to end.
-- Browser-local demo: request → driver accepts → starts → ends → rider sees impact. Fictional riders, seeded AQI, fixed coordinates and illustrative SVG map are labeled.
-- Frontend-only `amplify.yml`, Node 22.20.0 and `AMPLIFY_OUTPUTS_JSON` validation. No backend deployment phase.
-- Flash's `c008f11` (`ensureProfile`, `indexTrip`) and `2862360` (`searchTrips`) are merged into this branch. The supplied outputs lack these operations; their deployment is unverified.
+- React frontend and rewards on kapil/react-frontend in [draft PR #1](https://github.com/FLASH2332/carpool-india/pull/1); not merged into main.
+- [Live frontend](https://demo.dl7lvp454dd36.amplifyapp.com/): manual Sydney Amplify Hosting job 3 DEPLOY/VERIFY succeeded, connected to Flash's existing Mumbai sandbox. GitHub auto-deployment remains unconnected.
+- Merged main through c79fe9b. New supplied outputs validate Mumbai Auth/Data, six mutations (ensureProfile, indexTrip, requestSeat, respondToRequest, startTrip, completeTrip), searchTrips, orgReport and OrgAdmins. Outputs remain ignored.
+- Profile setup via ensureProfile; owner saves exclude organisation/city/totals. Driver accept/decline/start/complete call backend operations; participant subscriptions refresh trips and seats.
+- Typed map adapters for search, requests and DRAFT → indexTrip publishing in src/cloud.ts. Cloud discovery/publishing remain gated until real coordinates/routes arrive.
+- Gamification: 10 carbon points/kg, 1/5/10/25 kg milestones and monthly organisation leaderboard from ImpactEntry. Backend ride points stay separate.
+- Driver displays returned final rider fuel shares. Rider UI no longer presents published estimates as final payments; settlements need backend persistence.
+- Browser demo request → accept → start → end → rewards verified: 22.4 km, 3.14 kg reported CO₂, 31 carbon points, 5 ride points and First footprint badge.
 
-Preserve Flash's existing Mumbai backend (`ap-south-1`). Kapil's Sydney project hosts the frontend only. Do not deploy a second sandbox or migrate the backend to finish hosting.
+Preserve Flash's Mumbai backend (ap-south-1). Sydney (ap-southeast-2) hosts only the frontend. amplify.yml has no backend phase.
 
 ## Parallel work
 
-| Owner | Next work | Integration deliverable |
-| --- | --- | --- |
-| Flash / JD | Configure real organisation domains and deploy/verify `ensureProfile`, `indexTrip`, `searchTrips` in the existing backend. | Fresh generated outputs, permitted test identities/domains and operation contracts. Keep outputs out of Git. |
-| Flash / JD | Request/accept/decline/cancel/start/complete operations; participant/org access controls and protected server fields. | Atomic last-seat acceptance, idempotent completion and verified driver/rider test identities. Broad model reads are not an org access boundary. |
-| WinterSun / Ashwin | Amazon Location map, place autocomplete, real route calculation and location display. | React components; selected coordinates/labels; `[longitude, latitude][]` line; road distance in km and duration. Search needs pickup/drop coordinates and departure time. |
-| WinterSun / Ashwin | India AQI/fuel factors and video preparation. | Data provenance/update times, missing-data behavior, agreed per-person impact factors and recording script. Current demo assumes no detour and attributes avoided CO2 to riders only. |
-| Flash, repository owner | Authorize [Sydney Amplify GitHub app](https://github.com/apps/aws-amplify-ap-southeast-2/installations/new), limited to `carpool-india`. | Amplify can see `FLASH2332/carpool-india`. Kapil's installation targets did not include FLASH2332; this was blocked in his session. |
+| Owner | Remaining deliverable |
+| --- | --- |
+| Flash / JD | Real allowed test domains and two permitted verified test identities; live operation validation, transaction-safe acceptance and recoverable completion. |
+| Flash / JD | Backend organisation/participant access, protected server fields, validated route distance and persistent final settlements. |
+| WinterSun / Ashwin | Amazon Location map/autocomplete; pickup/drop coordinates, labels, ISO departure, [longitude, latitude] route and road distance. Use src/cloud.ts adapters. |
+| WinterSun / Ashwin | Live AQI ingestion, factor provenance and demo video. Current prices/domains are placeholders. |
+| Flash, repo owner | Authorize Sydney Amplify GitHub app for carpool-india and connect frontend-only builds. Manual hosting remains usable. |
 
-Backend and map work can happen at the same time using the coordinate contract above. Neither depends on automatic hosting. A local demo video is possible now if it is clearly labeled; a live two-device video needs integration and validation first.
-
-## Sequential integration
-
-1. Flash deploys operations/configures accepted domains and shares fresh outputs securely. Never share passwords, tokens or CLI keys in Git/chat.
-2. Connect `ensureProfile` so server logic sets organisation/city; save vehicle/UPI fields separately. Surface domain rejection rather than bypassing it.
-3. Integrate WinterSun's places/routes. Call `searchTrips` with actual coordinates; use walking-distance results instead of the current label-substring search/departure sorting. Create a valid DRAFT trip and publish with `indexTrip`.
-4. Wire server ride mutations; unblock real-account actions only after authorization/transitions are verified. Connect the agreed location-history contract when available.
-5. Configure a Git-connected frontend app in Sydney, using `kapil/react-frontend`, committed frontend-only build settings and `dist`. Set `AMPLIFY_OUTPUTS_JSON` to complete latest Mumbai outputs. Do not add `ampx pipeline-deploy` or a backend deployment role. Keep the working manual demo until the replacement is verified.
-6. Test two devices: allowed signup/profile, routes, request/subscription, concurrent last-seat acceptance, driver-only transitions, cross-org rejection, GPS consent/errors and exactly-once impact. Then record the live flow.
+Maps and backend fixes can progress together. Then test two devices sequentially: signup/profile → publish → search → request → accept → GPS/start → complete → rewards. Test last-seat concurrency, repeated completion and cross-org rejection before a live video.
 
 ## Validation and limits
 
-After merging `2862360`, the frontend production build (including TypeScript), lint and all four domain tests passed. Vite reports a bundle-size warning (approximately 525 kB JS, 154 kB gzip). Hosting job 2 remains successful; the backend-only merge does not add new runtime frontend behavior.
+Seven tests, lint and production TypeScript/Vite build pass. JS is approximately 539 kB / 157 kB gzip with a size warning. Backend-wide type checking needs generated function environment declarations from Flash's sandbox.
 
-Run `npm test`, `npm run lint`, `npm run build` after integration. Backend `npm run typecheck` needs generated `$amplify/env/ensure-profile`, `$amplify/env/index-trip` and `$amplify/env/search-trips` declarations from the backend owner's environment. Do not invent runtime config or deploy a second sandbox just to satisfy this check.
+JSON compatibility is validated, but authenticated behavior is not verified end to end: source permits only example-corp.com / example-college.ac.in, and no permitted test identity was provided. Live maps, admin report UI, recurring trips and persistent settlement retrieval are not delivered.
 
-The real ride workflow is incomplete. Maps, live AQI and backend authorization fixes remain pending. Location history/TTL, reports and recurring commutes are not implemented in this frontend. See [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) for technical details/demo steps and [AWS_SETUP.md](AWS_SETUP.md) for hosting.
+See [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) for technical findings and [AWS_SETUP.md](AWS_SETUP.md) for hosting.

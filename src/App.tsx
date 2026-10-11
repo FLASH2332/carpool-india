@@ -17,7 +17,6 @@ import {
   money,
   seed,
   today,
-  upiLink,
 } from "./domain";
 import type { Profile, Store, Trip } from "./domain";
 import {
@@ -26,7 +25,11 @@ import {
   saveCloudProfile,
   subscribeCloud,
   workflowMissing,
+  respondCloud,
+  startCloud,
+  completeCloud,
 } from "./cloud";
+import { Rewards } from "./RewardsPanel";
 import "./App.css";
 
 type Page = "home" | "find" | "offer" | "rides" | "impact" | "profile";
@@ -232,7 +235,7 @@ function Auth({
     } catch (error) {
       setMessage(
         error instanceof Error
-          ? error.message
+          ? error.message.replace(/^PreSignUp failed with error\s*/i, "").replace(/\.$/, "")
           : "Unable to authenticate. Try again.",
       );
     } finally {
@@ -405,6 +408,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState("");
   const [tracking, setTracking] = useState(false);
+  const [settlements, setSettlements] = useState<Record<string, { riderId?: string | null; share?: number | null; upiLink?: string | null }[]>>({});
+  const watchedTripIds = [...new Set(store.requests.filter(r => ["ACCEPTED", "DONE"].includes(r.status)).map(r => r.tripId))].sort().join(",");
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30000);
@@ -484,7 +489,17 @@ export default function App() {
   useEffect(() => {
     if (mode !== "cloud") return;
     void reload();
+    return () => {
+      // This ref is a request sequence counter; cleanup deliberately invalidates the latest request.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      ++loadVersion.current;
+    };
+  }, [mode, reload]);
+  useEffect(() => {
+    if (mode !== "cloud") return;
     const cleanup = subscribeCloud(
+      userId,
+      watchedTripIds ? watchedTripIds.split(",") : [],
       () => {
         void reload();
       },
@@ -494,12 +509,9 @@ export default function App() {
         ),
     );
     return () => {
-      // Invalidate async data requests; this ref is a sequence counter, not a DOM ref.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      ++loadVersion.current;
       cleanup();
     };
-  }, [mode, reload]);
+  }, [mode, reload, userId, watchedTripIds]);
   useEffect(() => {
     if (mode === "demo") {
       try {
@@ -946,7 +958,7 @@ export default function App() {
             </>
           )}
           {page === "find" && (
-            <FindRides trips={available} renderTrip={renderTrip} mode={mode} />
+            mode === "cloud" ? <><Heading eyebrow="FIND YOUR PEOPLE" title="Find a ride" description="Real pickup and drop selection is being prepared." /><p className="notice">{workflowMissing}</p></> : <FindRides trips={available} renderTrip={renderTrip} mode={mode} />
           )}
           {page === "offer" && (
             <Offer
@@ -979,7 +991,7 @@ export default function App() {
               onSave={(p) =>
                 run(async () => {
                   if (mode === "cloud") {
-                    await saveCloudProfile(p, !!profile);
+                    await saveCloudProfile(p);
                     await reload();
                   } else
                     setStore((s) => ({
@@ -1034,11 +1046,10 @@ export default function App() {
                                 className="primary"
                                 disabled={busy}
                                 onClick={() =>
-                                  void run(() =>
-                                    demoOnly(() =>
-                                      setStore(acceptDemo(store, r.id, userId)),
-                                    ),
-                                  )
+                                  void run(async () => {
+                                    if (mode === "cloud") { await respondCloud(r.id, true); await reload(); }
+                                    else setStore(acceptDemo(store, r.id, userId));
+                                  })
                                 }
                               >
                                 Accept
@@ -1047,7 +1058,8 @@ export default function App() {
                                 className="secondary"
                                 disabled={busy}
                                 onClick={() =>
-                                  void run(() =>
+                                  void run(async () => {
+                                    if (mode === "cloud") { await respondCloud(r.id, false); await reload(); return; }
                                     demoOnly(() =>
                                       setStore((s) => ({
                                         ...s,
@@ -1057,8 +1069,8 @@ export default function App() {
                                             : x,
                                         ),
                                       })),
-                                    ),
-                                  )
+                                    );
+                                  })
                                 }
                               >
                                 Decline
@@ -1073,7 +1085,7 @@ export default function App() {
                               View trip ↗
                             </button>
                           )}
-                          {r.riderId === userId && r.status === "PENDING" && (
+                          {mode === "demo" && r.riderId === userId && r.status === "PENDING" && (
                             <button
                               className="secondary"
                               disabled={busy}
@@ -1169,7 +1181,8 @@ export default function App() {
                               className="primary"
                               disabled={busy}
                               onClick={() =>
-                                void run(() =>
+                                void run(async () => {
+                                  if (mode === "cloud") { await startCloud(selected.id); await reload(); return; }
                                   demoOnly(() => {
                                     if (
                                       !store.requests.some(
@@ -1189,8 +1202,8 @@ export default function App() {
                                           : t,
                                       ),
                                     }));
-                                  }),
-                                )
+                                  });
+                                })
                               }
                             >
                               Start trip →
@@ -1213,7 +1226,16 @@ export default function App() {
                                 className="primary"
                                 disabled={busy}
                                 onClick={() =>
-                                  void run(() =>
+                                  void run(async () => {
+                                    if (mode === "cloud") {
+                                      setTracking(false);
+                                      try {
+                                        const completion = await completeCloud(selected.id);
+                                        setSettlements(s => ({ ...s, [selected.id]: (completion.perRider ?? []).filter((r): r is NonNullable<typeof r> => !!r) }));
+                                      }
+                                      finally { await reload(); }
+                                      return;
+                                    }
                                     demoOnly(() => {
                                       setStore(
                                         completeDemo(
@@ -1223,8 +1245,8 @@ export default function App() {
                                         ),
                                       );
                                       setTracking(false);
-                                    }),
-                                  )
+                                    });
+                                  })
                                 }
                               >
                                 End trip
@@ -1241,6 +1263,7 @@ export default function App() {
                           )}
                         {selected.status === "DONE" && (
                           <>
+                            {selected.driverId === userId && settlements[selected.id]?.map((r, index) => <p key={r.riderId ?? index}>Rider {index + 1}: final fuel share {money(r.share ?? 0)}<small className="fine"> · Confirmed by the completion operation. Share this amount with the rider.</small></p>)}
                             <div className="summary-numbers">
                               {myImpact
                                 .filter((i) => i.tripId === selected.id)
@@ -1248,7 +1271,7 @@ export default function App() {
                                   <p key={i.id}>
                                     <b>
                                       {i.kgCO2.toFixed(2)} kg CO₂ ·{" "}
-                                      {money(i.rupees)} saved · {i.points}{" "}
+                                      {money(i.rupees)} {i.role === "DRIVER" ? "fuel contributions" : "saved"} · {i.points}{" "}
                                       points
                                     </b>
                                   </p>
@@ -1260,7 +1283,7 @@ export default function App() {
                               </p>
                             ) : (
                               selected.driverId !== userId && (
-                                <Payment trip={selected} />
+                                <p className="fine">Ask the driver for the final fuel share. The backend does not yet store a rider settlement that can be retrieved on this device.</p>
                               )
                             )}
                             <button
@@ -1295,7 +1318,7 @@ export default function App() {
                 />
                 <Stat
                   value={money(totals.rupees)}
-                  label="Money saved"
+                  label="Savings / fuel contributions"
                   icon="₹"
                 />
                 <Stat
@@ -1309,6 +1332,7 @@ export default function App() {
                   icon="◎"
                 />
               </div>
+              <Rewards store={store} userId={userId} demo={mode === "demo"} kgCO2={totals.co2} orgId={profile?.orgId} />
               <section className="panel impact-history">
                 <h2>Your journey so far</h2>
                 {myImpact.length ? (
@@ -1563,6 +1587,7 @@ function ProfileForm({
           <Field label="City">
             <select
               value={value.city}
+              disabled={!demo}
               onChange={(e) => update("city", e.target.value)}
             >
               {["Bengaluru", "Delhi", "Mumbai"].map((c) => (
@@ -1836,43 +1861,5 @@ function Offer({
         </div>
       )}
     </>
-  );
-}
-function Payment({ trip }: { trip: Trip }) {
-  const [link, setLink] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let cancelled = false;
-    client.models.UserProfile.get({ userId: trip.driverId })
-      .then((r) => {
-        if (cancelled) return;
-        if (r.errors?.length) {
-          setError("Unable to load driver payment details.");
-          return;
-        }
-        setLink(
-          upiLink(
-            r.data?.upiVpa || "",
-            r.data?.name || "Driver",
-            trip.shareRupees,
-          ),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setError("Unable to load driver payment details.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [trip.driverId, trip.shareRupees]);
-  return link ? (
-    <a className="primary payment" href={link}>
-      Open UPI app · {money(trip.shareRupees)}
-    </a>
-  ) : (
-    <p className="fine">
-      {error ||
-        "The driver has no valid UPI ID. Arrange fuel sharing directly."}
-    </p>
   );
 }
