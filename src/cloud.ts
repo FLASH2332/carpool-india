@@ -115,4 +115,4 @@ export function subscribeCloud(
   return () => subscriptions.forEach((s) => s.unsubscribe());
 }
 export const workflowMissing =
-  "Flash’s deployed schema does not yet expose the ride workflow Lambdas. See docs/BACKEND_HANDOFF.md. You can try the full flow in demo mode.";
+  "Ride requests and trip completion are not connected yet. See docs/BACKEND_HANDOFF.md. You can try the full flow in demo mode.";
