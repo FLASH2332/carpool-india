@@ -72,7 +72,7 @@ npm run dev -- --host 127.0.0.1
 
 Use `npm run build` for a `dist/` artifact. Keep generated outputs ignored, and regenerate from Flash's backend when its schema changes. Do not run `npm run sandbox` merely to host the frontend: that command deploys a separate backend using your account and incurs resources.
 
-The committed `.npmrc` uses `legacy-peer-deps=true` consistently for install and CI: the existing Amplify dependency tree otherwise produces a bundled-peer lockfile error. The lockfile was regenerated with this setting and `npm ci --dry-run` verified it.
+The committed `.npmrc` uses `legacy-peer-deps=true` consistently for install and CI: the existing Amplify dependency tree otherwise produces a bundled-peer lockfile error. The lockfile was regenerated with this setting and a clean `npm ci` succeeded. Stop the dev server before reinstalling on Windows so Vite's native bindings are not locked.
 
 ## Official documentation
 

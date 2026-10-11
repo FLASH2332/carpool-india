@@ -1,7 +1,7 @@
 # GreenCommute India
 
 Office and college carpooling. React + Vite + TypeScript frontend, AWS Amplify Gen 2 backend
-(Cognito, AppSync + DynamoDB, Lambda) in `ap-south-1`.
+(Cognito, AppSync + DynamoDB; Lambda workflows pending) in `ap-south-1`.
 
 The React app includes authentication, profiles, an overview, ride search, ride offers,
 requests, a live-trip panel, summaries and My Impact. Explore the labelled browser-local
