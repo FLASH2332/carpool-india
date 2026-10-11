@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "typecheck": "tsc -b && tsc -p amplify --noEmit",
     "sandbox": "ampx sandbox --profile greencommute",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prebuild": "node scripts/prepare-outputs.mjs",
+    "test": "tsx --test src/domain.test.ts"
   },
   "dependencies": {
     "aws-amplify": "^6.22.1",
