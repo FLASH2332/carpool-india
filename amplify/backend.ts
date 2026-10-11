@@ -24,6 +24,13 @@ const backend = defineBackend({
   startTrip,
 });
 
+// Sandbox deploys use CloudFormation Express mode, which fails any update to the
+// user pool ("Invalid AttributeDataType input") while the template lists the
+// email attribute. Email is still mandatory because it is the sign-in name.
+backend.auth.resources.cfnResources.cfnUserPool.addPropertyDeletionOverride(
+  'Schema',
+);
+
 // respondToRequest takes a seat with a conditional write straight to the Trip
 // table, so two accepts at the same moment can never oversell the last seat.
 const tripTable = backend.data.resources.tables['Trip'];
