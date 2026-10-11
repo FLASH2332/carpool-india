@@ -6,7 +6,7 @@ Flash's existing backend uses Mumbai **ap-south-1**. Kapil selected Sydney **ap-
 
 - Live frontend: https://demo.dl7lvp454dd36.amplifyapp.com/
 - Amplify app: `greencommute-india`, ID `dl7lvp454dd36`, branch `demo`, region `ap-southeast-2`.
-- A manual ZIP deployment of the tested `dist/` build completed with job `1` status `SUCCEED`. The hosted login screen and interactive demo loaded successfully with no browser console errors.
+- The latest manual ZIP deployment completed with job `2` status `SUCCEED` (deploy and verify). The hosted login screen and interactive demo loaded successfully; the original hosted browser verification found no console errors.
 - This app is not connected to GitHub auto-deployment yet. The owner must authorize repository access through Amplify before push-triggered builds can be enabled. Changes to the frontend branch do not automatically update this manual deployment.
 - Real ride workflow functions, Amazon Location integration and backend authorization fixes remain pending; see the backend handoff. Hosting does not complete those features.
 

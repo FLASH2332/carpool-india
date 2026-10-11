@@ -2,7 +2,7 @@
 
 Kapil's React frontend is implemented on the existing React/Vite starter. `amplify_outputs.json` from Flash is configured for Mumbai. The current schema has seven models (not the eight in the feature spec); no LocationPing model exists yet.
 
-Flash's main commit `c008f11` adds `ensureProfile` and `indexTrip` in source and is merged into this branch. The supplied outputs do not contain these custom mutations, so deployment and client integration are still pending. `ensureProfile` currently accepts only the placeholder domains in `amplify/shared/factors.ts`; real team domains need backend configuration. `indexTrip` needs a real route line from the map integration before the frontend can publish a ride. Preserve the Mumbai backend; Sydney hosting must not deploy or migrate it.
+Flash's commits `c008f11` and `2862360` add `ensureProfile`, `indexTrip` and `searchTrips` in source and are merged into this branch. The supplied outputs do not contain these custom operations, so deployment and client integration are still pending. `ensureProfile` currently accepts only the placeholder domains in `amplify/shared/factors.ts`; real team domains need backend configuration. `indexTrip` and `searchTrips` need real coordinates/route state from the map integration. Preserve the Mumbai backend; Sydney hosting must not deploy or migrate it. See [TEAM_HANDOVER.md](TEAM_HANDOVER.md) for parallel tasks and integration order.
 
 ## Working against the supplied sandbox
 
@@ -49,4 +49,4 @@ The demo runs entirely in one browser's local storage. It is not a two-phone App
 
 Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Then test real verified driver/rider accounts on two devices, subscription updates, last-seat concurrent acceptance, organisation access rejection, GPS consent/errors and completion idempotency after the server operations are implemented. Reports and recurring commutes remain optional and are not implemented in this frontend.
 
-Backend type checking additionally requires Amplify-generated `$amplify/env/ensure-profile` and `$amplify/env/index-trip` declarations from the backend owner's environment. A frontend checkout without those generated files can run `npx tsc -b`, tests, lint and build; do not create a second sandbox merely to generate them.
+Backend type checking additionally requires Amplify-generated `$amplify/env/ensure-profile`, `$amplify/env/index-trip` and `$amplify/env/search-trips` declarations from the backend owner's environment. A frontend checkout without those generated files can run `npx tsc -b`, tests, lint and build; do not create a second sandbox merely to generate them.
