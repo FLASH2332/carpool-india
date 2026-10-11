@@ -3,15 +3,25 @@ import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { ensureProfile } from './functions/ensure-profile/resource';
 import { indexTrip } from './functions/index-trip/resource';
+import { requestSeat } from './functions/request-seat/resource';
+import { respondToRequest } from './functions/respond-to-request/resource';
 import { searchTrips } from './functions/search-trips/resource';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
  */
-defineBackend({
+const backend = defineBackend({
   auth,
   data,
   ensureProfile,
   indexTrip,
+  requestSeat,
+  respondToRequest,
   searchTrips,
 });
+
+// respondToRequest takes a seat with a conditional write straight to the Trip
+// table, so two accepts at the same moment can never oversell the last seat.
+const tripTable = backend.data.resources.tables['Trip'];
+backend.respondToRequest.addEnvironment('TRIP_TABLE_NAME', tripTable.tableName);
+tripTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem');

@@ -1,6 +1,8 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 import { ensureProfile } from '../functions/ensure-profile/resource';
 import { indexTrip } from '../functions/index-trip/resource';
+import { requestSeat } from '../functions/request-seat/resource';
+import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
 
 /**
@@ -232,11 +234,41 @@ const schema = a.schema({
     .returns(a.ref('TripMatch').array())
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(searchTrips)),
+
+  // Rider asks for a seat on an OPEN trip in their organisation.
+  requestSeat: a
+    .mutation()
+    .arguments({
+      tripId: a.id().required(),
+      pickupLat: a.float().required(),
+      pickupLng: a.float().required(),
+      pickupLabel: a.string(),
+      dropLat: a.float().required(),
+      dropLng: a.float().required(),
+      dropLabel: a.string(),
+      sharedKm: a.float(),
+    })
+    .returns(a.ref('RideRequest'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(requestSeat)),
+
+  // Driver accepts (taking a seat) or declines a PENDING request.
+  respondToRequest: a
+    .mutation()
+    .arguments({
+      requestId: a.id().required(),
+      accept: a.boolean().required(),
+    })
+    .returns(a.ref('RideRequest'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(respondToRequest)),
 })
   .authorization((allow) => [
     allow.resource(ensureProfile),
     allow.resource(indexTrip),
     allow.resource(searchTrips),
+    allow.resource(requestSeat),
+    allow.resource(respondToRequest),
   ]);
 
 export type Schema = ClientSchema<typeof schema>;
