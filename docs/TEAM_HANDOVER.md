@@ -17,10 +17,24 @@ Preserve Flash's Mumbai backend (ap-south-1). Sydney (ap-southeast-2) hosts only
 
 ## Parallel work
 
+### Latest repository check and access-control update
+
+Checked origin/main through **9b9629a** on 11 October 2026. Flash added lockfile/hosting build fixes (74bff49, 465c86c, 9b9629a); these are merged, retaining this branch's frontend-only hosting configuration. No new maps, domain configuration, completion recovery or access-control implementation appeared in those commits. This is a source check, not proof of deployment.
+
+Sydney project inventory still shows the existing greencommute-india app with no repository connection, so GitHub automatic hosting remains pending.
+
+Kapil has now added **owner/participant model authorization and organisation-scoped discovery/leaderboard queries in code**, plus transactionally granted accepted-rider access. They are **not deployed**. Existing live job 3 remains unchanged. See [ACCESS_CONTROL.md](ACCESS_CONTROL.md) for the permission matrix, existing-record backfill and direct API tests.
+
+| Owner | New release responsibilities |
+| --- | --- |
+| Flash / JD | Review/deploy the access patch to the existing Mumbai sandbox; audit legacy records and backfill only verified accepted/DONE rider IDs; regenerate outputs and verify direct API denial tests. |
+| Kapil | Integrate fresh outputs/maps, validate frontend subscriptions under the deployed rules, then publish the coordinated frontend update. Old outputs intentionally block cloud loading in this branch. |
+| Flash + Kapil | Test same-org unrelated member, pending/accepted rider, cross-org user and admin access, plus concurrent acceptance and full two-device flow. |
+
 | Owner | Remaining deliverable |
 | --- | --- |
 | Flash / JD | Real allowed test domains and two permitted verified test identities; live operation validation, transaction-safe acceptance and recoverable completion. |
-| Flash / JD | Backend organisation/participant access, protected server fields, validated route distance and persistent final settlements. |
+| Flash / JD | Review/deploy/test the new access controls; finish validated route distance, recoverable completion and persistent final settlements. |
 | WinterSun / Ashwin | Amazon Location map/autocomplete; pickup/drop coordinates, labels, ISO departure, [longitude, latitude] route and road distance. Use src/cloud.ts adapters. |
 | WinterSun / Ashwin | Live AQI ingestion, factor provenance and demo video. Current prices/domains are placeholders. |
 | Flash, repo owner | Authorize Sydney Amplify GitHub app for carpool-india and connect frontend-only builds. Manual hosting remains usable. |
@@ -29,7 +43,7 @@ Maps and backend fixes can progress together. Then test two devices sequentially
 
 ## Validation and limits
 
-Seven tests, lint and production TypeScript/Vite build pass. JS is approximately 539 kB / 157 kB gzip with a size warning. Backend-wide type checking needs generated function environment declarations from Flash's sandbox.
+The access patch passes **15 tests**, including compiled-schema authorization and access checks, plus lint and production TypeScript/Vite build. Backend-wide type checking still needs generated function environment declarations from Flash's sandbox. This is not live API authorization/concurrency validation.
 
 JSON compatibility is validated, but authenticated behavior is not verified end to end: source permits only example-corp.com / example-college.ac.in, and no permitted test identity was provided. Live maps, admin report UI, recurring trips and persistent settlement retrieval are not delivered.
 

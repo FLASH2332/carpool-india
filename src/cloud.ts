@@ -2,7 +2,8 @@ import "./configure";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import type { Profile, Store, Trip } from "./domain";
-import { makeLeaderboard } from "./rewards";
+import { carbonPoints } from "./rewards";
+import outputs from '../amplify_outputs.json';
 
 export const client = generateClient<Schema>();
 function checked<T>(result: { data?: T; errors?: { message: string }[] }): T {
@@ -11,6 +12,10 @@ function checked<T>(result: { data?: T; errors?: { message: string }[] }): T {
   return result.data as T;
 }
 export async function loadCloud(userId: string): Promise<Store> {
+  const queries = outputs.data.model_introspection.queries;
+  const mutations = outputs.data.model_introspection.mutations;
+  if (!('communityLeaderboard' in queries) || !('createDraftTrip' in mutations) || !('updateTripLocation' in mutations))
+    throw Error('The access-control backend update is not deployed/configured yet. Your organiser must supply fresh Amplify outputs. Demo mode remains available.');
   const page = async (
     fetch: (
       token?: string,
@@ -67,7 +72,7 @@ export async function loadCloud(userId: string): Promise<Store> {
   store.trips = store.trips.filter(t => t.id && t.startLabel && t.endLabel && t.departAt).map(t => ({ ...t, routeKm: t.routeKm ?? 0, shareRupees: t.shareRupees ?? 0, seatsLeft: t.seatsLeft ?? 0 }));
   store.impacts = store.impacts.map(i => ({ ...i, kmShared: i.kmShared ?? 0, kgCO2: i.kgCO2 ?? 0, rupees: i.rupees ?? 0, points: i.points ?? 0 }));
   // Riders need the referenced trips even though discovery is handled by searchTrips.
-  const missingIds = [...new Set(store.requests.map(r => r.tripId))].filter(id => !store.trips.some(t => t.id === id));
+  const missingIds = [...new Set(store.requests.filter(r => r.status === 'ACCEPTED' || r.status === 'DONE').map(r => r.tripId))].filter(id => !store.trips.some(t => t.id === id));
   const referenced = await Promise.all(missingIds.map(id => client.models.Trip.get({ id })));
   for (const result of referenced) {
     const trip = checked(result);
@@ -138,8 +143,8 @@ export async function requestCloud(trip: Trip, places: Omit<RideSearch, "departA
 export async function publishCloud(trip: Trip, routeLine: [number, number][]) {
   if (routeLine.length < 2 || !routeLine.every(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat) && Math.abs(lng) <= 180 && Math.abs(lat) <= 90))
     throw Error("Select a valid driving route before publishing.");
-  const { id, driverId, startLabel, endLabel, startLat, startLng, endLat, endLng, departAt, seatsTotal, routeKm } = trip;
-  const draft = checked(await client.models.Trip.create({ id, driverId, startLabel, endLabel, startLat, startLng, endLat, endLng, departAt, seatsTotal, routeKm, routeLine: JSON.stringify(routeLine), status: "DRAFT" }));
+  const { startLabel, endLabel, startLat, startLng, endLat, endLng, departAt, seatsTotal, routeKm } = trip;
+  const draft = checked(await client.mutations.createDraftTrip({ startLabel, endLabel, startLat, startLng, endLat, endLng, departAt, seatsTotal, routeKm, routeLine: JSON.stringify(routeLine) }));
   if (!draft) throw Error("The draft trip was not confirmed.");
   const published = checked(await client.mutations.indexTrip({ tripId: draft.id }));
   if (!published) throw Error("Draft saved, but publishing was not confirmed. Refresh before retrying.");
@@ -160,22 +165,11 @@ export async function completeCloud(tripId: string) {
   }
 }
 
-export async function loadLeaderboard(orgId: string, month: string) {
-  const impacts = [];
-  let nextToken: string | null | undefined;
-  do {
-    const result = await client.models.ImpactEntry.listImpactEntryByOrgIdAndMonth(
-      { orgId, month: { eq: month } },
-      { nextToken, selectionSet: ["userId", "tripId", "month", "kgCO2", "points"] },
-    );
-    impacts.push(...checked(result));
-    nextToken = result.nextToken;
-  } while (nextToken);
-  const memberIds = [...new Set(impacts.map(i => i.userId).filter((id): id is string => !!id))];
-  // Only fetch display names, never phone, email or UPI for the leaderboard.
-  const members = await Promise.all(memberIds.map(async userId => {
-    const result = checked(await client.models.UserProfile.get({ userId }, { selectionSet: ["userId", "name", "orgId"] }));
-    return result?.orgId === orgId ? { userId, name: result.name || "Community member" } : null;
+export async function loadLeaderboard(_orgId: string, month: string) {
+  // The server derives organisation from the caller; clients cannot select another org.
+  const rows = checked(await client.queries.communityLeaderboard({ month })) ?? [];
+  return rows.filter((row): row is NonNullable<typeof row> => !!row).map(row => ({
+    userId: row.userId, name: row.name, kgCO2: Math.round(row.kgCO2 * 100) / 100,
+    carbonPoints: carbonPoints(row.kgCO2), ridePoints: row.points, trips: row.trips,
   }));
-  return makeLeaderboard(impacts.filter(i => i.userId && i.tripId && i.month).map(i => ({ userId: i.userId!, tripId: i.tripId!, month: i.month!, kgCO2: i.kgCO2 ?? 0, points: i.points ?? 0 })), members.filter((m): m is { userId: string; name: string } => !!m), month);
 }

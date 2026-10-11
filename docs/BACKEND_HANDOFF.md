@@ -2,6 +2,8 @@
 
 Reviewed Flash's supplied handoff HTML, new amplify_outputs.json and source through c79fe9b on 11 October 2026. The handoff describes a deployed Mumbai sandbox; its old note about unpushed ride steps is superseded by current main. Config validation does not prove a live two-device test passed.
 
+**Access-control follow-up:** main is now merged through 9b9629a (hosting/lockfile fixes). This branch replaces broad reads with owner/participant rules and server-scoped discovery/leaderboard, and acceptance now grants rider access transactionally. These changes are not deployed. [ACCESS_CONTROL.md](ACCESS_CONTROL.md) supersedes the broad-read and nontransactional-acceptance findings below for this branch; they still describe the previous live backend until Flash deploys and verifies the patch.
+
 ## Integrated frontend
 
 - ensureProfile assigns organisation/city after sign-in. Owner saves update personal/vehicle/UPI fields without sending organisation or totals.

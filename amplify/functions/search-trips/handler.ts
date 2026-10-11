@@ -7,6 +7,7 @@ import type { Schema } from '../../data/resource';
 import { unwrap } from '../../shared/data';
 import { type LngLat, cellAndNeighbours, parseRouteLine } from '../../shared/geo';
 import { matchRoute } from '../../shared/match';
+import { discoveryTrip } from '../../shared/access';
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
 Amplify.configure(resourceConfig, libraryOptions);
@@ -106,7 +107,7 @@ export const handler: Schema['searchTrips']['functionHandler'] = async (
 
   return matches
     .map(({ trip, driverId, walkKmToPickup, sharedKm }) => ({
-      trip,
+      trip: discoveryTrip(trip),
       driverName: drivers.get(driverId)?.name ?? null,
       vehicleType: drivers.get(driverId)?.vehicleType ?? null,
       walkKmToPickup,

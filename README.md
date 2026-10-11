@@ -12,8 +12,10 @@ reads/profile writes connect to Flash's sandbox via `amplify_outputs.json`.
 
 **Cloud workflow status:** the new handoff includes server ride operations. Profile
 setup and driver actions are wired; real search/publishing need Amazon Location map
-coordinates and permitted test identities. Organisation access and completion safety
-still need backend fixes. A live two-device workflow has not been verified.
+coordinates and permitted test identities. This branch adds owner/participant access
+and organisation-scoped queries, pending deployment by Flash to the existing Mumbai
+sandbox. It must receive fresh outputs before cloud mode is enabled. Completion safety
+still needs work. A live two-device workflow has not been verified.
 
 My Impact includes CO₂ carbon points, milestone badges and a monthly community
 leaderboard, separate from backend ride points.
@@ -21,6 +23,7 @@ leaderboard, separate from backend ride points.
 - [AWS / Builder ID / Amplify Hosting setup](docs/AWS_SETUP.md)
 - [Backend and maps handoff, demo steps and limitations](docs/BACKEND_HANDOFF.md)
 - [Team responsibilities and validation status](docs/TEAM_HANDOVER.md)
+- [Access-control changes and deployment checklist](docs/ACCESS_CONTROL.md)
 
 Install with `npm ci`, copy Flash's generated outputs to the repository root, then
 run `npm run dev`. For Hosting, supply `AMPLIFY_OUTPUTS_JSON` as described in the setup

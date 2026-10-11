@@ -10,6 +10,9 @@ import { respondToRequest } from './functions/respond-to-request/resource';
 import { searchTrips } from './functions/search-trips/resource';
 import { startTrip } from './functions/start-trip/resource';
 import { storage } from './storage/resource';
+import { createDraftTrip } from './functions/create-draft-trip/resource';
+import { updateTripLocation } from './functions/update-trip-location/resource';
+import { communityLeaderboard } from './functions/community-leaderboard/resource';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -26,6 +29,9 @@ const backend = defineBackend({
   searchTrips,
   startTrip,
   storage,
+  createDraftTrip,
+  updateTripLocation,
+  communityLeaderboard,
 });
 
 // Sandbox deploys use CloudFormation Express mode, which fails any update to the
@@ -35,8 +41,10 @@ backend.auth.resources.cfnResources.cfnUserPool.addPropertyDeletionOverride(
   'Schema',
 );
 
-// respondToRequest takes a seat with a conditional write straight to the Trip
-// table, so two accepts at the same moment can never oversell the last seat.
+// respondToRequest transactionally changes request status, seat count and rider access.
 const tripTable = backend.data.resources.tables['Trip'];
 backend.respondToRequest.addEnvironment('TRIP_TABLE_NAME', tripTable.tableName);
-tripTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem');
+tripTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem', 'dynamodb:ConditionCheckItem');
+const requestTable = backend.data.resources.tables['RideRequest'];
+backend.respondToRequest.addEnvironment('REQUEST_TABLE_NAME', requestTable.tableName);
+requestTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem');

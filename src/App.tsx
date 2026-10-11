@@ -562,11 +562,10 @@ export default function App() {
         lastSend.current = Date.now();
         sending.current = true;
         try {
-          const result = await client.models.Trip.update({
-            id: activeTripId,
-            lastLat: position.coords.latitude,
-            lastLng: position.coords.longitude,
-            lastAt: new Date().toISOString(),
+          const result = await client.mutations.updateTripLocation({
+            tripId: activeTripId,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
           });
           if (result.errors?.length)
             throw Error(result.errors.map((e) => e.message).join("; "));
