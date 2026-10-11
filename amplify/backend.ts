@@ -1,6 +1,7 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
+import { completeTrip } from './functions/complete-trip/resource';
 import { ensureProfile } from './functions/ensure-profile/resource';
 import { indexTrip } from './functions/index-trip/resource';
 import { requestSeat } from './functions/request-seat/resource';
@@ -14,6 +15,7 @@ import { startTrip } from './functions/start-trip/resource';
 const backend = defineBackend({
   auth,
   data,
+  completeTrip,
   ensureProfile,
   indexTrip,
   requestSeat,

@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { completeTrip } from '../functions/complete-trip/resource';
 import { ensureProfile } from '../functions/ensure-profile/resource';
 import { indexTrip } from '../functions/index-trip/resource';
 import { requestSeat } from '../functions/request-seat/resource';
@@ -271,8 +272,37 @@ const schema = a.schema({
     .returns(a.ref('Trip'))
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(startTrip)),
+
+  RiderSettlement: a.customType({
+    riderId: a.id(),
+    kgCO2: a.float(),
+    rupeesSaved: a.float(),
+    share: a.float(), // rupees the rider owes the driver
+    upiLink: a.string(), // null if the driver has no upiVpa
+  }),
+
+  DriverTotals: a.customType({
+    kmShared: a.float(),
+    kgCO2: a.float(),
+    rupees: a.float(), // sum of the riders' shares
+    points: a.integer(),
+  }),
+
+  TripCompletion: a.customType({
+    perRider: a.ref('RiderSettlement').array(),
+    driverTotals: a.ref('DriverTotals'),
+  }),
+
+  // Driver ends their ACTIVE trip: status DONE, impact written for everyone.
+  completeTrip: a
+    .mutation()
+    .arguments({ tripId: a.id().required() })
+    .returns(a.ref('TripCompletion'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(completeTrip)),
 })
   .authorization((allow) => [
+    allow.resource(completeTrip),
     allow.resource(startTrip),
     allow.resource(ensureProfile),
     allow.resource(indexTrip),
