@@ -33,6 +33,8 @@ export type Trip = {
   lastLat?: number;
   lastLng?: number;
   lastAt?: string;
+  /** [lng, lat] points as stored by the backend (JSON); absent on demo trips. */
+  routeLine?: unknown;
 };
 export type Request = {
   id: string;

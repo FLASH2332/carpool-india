@@ -94,33 +94,32 @@ export async function saveCloudProfile(profile: Profile) {
     plate,
     upiVpa,
   } = profile;
+  // Leave out empty fields: sending null means "clear this field", which the
+  // owner rule (read and update only) does not allow.
   const input = {
     userId,
-    name,
-    phone,
-    vehicleType,
-    fuel,
-    mileageKmpl,
-    seats,
-    plate,
-    upiVpa,
+    ...Object.fromEntries(
+      Object.entries({ name, phone, vehicleType, fuel, mileageKmpl, seats, plate, upiVpa })
+        .filter(([, value]) => value != null && value !== ""),
+    ),
   };
   const ensured = checked(await client.mutations.ensureProfile({ name, phone }));
   if (!ensured?.orgId) throw Error("Profile setup did not return an organisation.");
   checked(await client.models.UserProfile.update(input));
 }
 export function subscribeCloud(
-  userId: string,
-  tripIds: string[],
   refresh: () => void,
   onError: (error: unknown) => void,
 ) {
+  // No client filters on driverId, riderId or userId: the owner rules already
+  // limit each subscription to the caller's own records, and AppSync rejects a
+  // subscription whose filter names a field the owner rule also filters on.
   const subscriptions = [
-    client.models.Trip.onUpdate({ filter: { or: [{ driverId: { eq: userId } }, ...tripIds.map(id => ({ id: { eq: id } }))] } }).subscribe({ next: refresh, error: onError }),
-    client.models.Trip.onCreate({ filter: { driverId: { eq: userId } } }).subscribe({ next: refresh, error: onError }),
-    client.models.RideRequest.onCreate({ filter: { driverId: { eq: userId } } }).subscribe({ next: refresh, error: onError }),
-    client.models.RideRequest.onUpdate({ filter: { or: [{ riderId: { eq: userId } }, { driverId: { eq: userId } }] } }).subscribe({ next: refresh, error: onError }),
-    client.models.ImpactEntry.onCreate({ filter: { userId: { eq: userId } } }).subscribe({ next: refresh, error: onError }),
+    client.models.Trip.onUpdate().subscribe({ next: refresh, error: onError }),
+    client.models.Trip.onCreate().subscribe({ next: refresh, error: onError }),
+    client.models.RideRequest.onCreate().subscribe({ next: refresh, error: onError }),
+    client.models.RideRequest.onUpdate().subscribe({ next: refresh, error: onError }),
+    client.models.ImpactEntry.onCreate().subscribe({ next: refresh, error: onError }),
     client.models.AqiDaily.onUpdate().subscribe({ next: refresh, error: onError }),
   ];
   return () => subscriptions.forEach((s) => s.unsubscribe());

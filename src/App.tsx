@@ -30,6 +30,7 @@ import {
   completeCloud,
 } from "./cloud";
 import { Rewards } from "./RewardsPanel";
+import { FindCloud, OfferCloud, TripMap } from "./CloudRides";
 import "./App.css";
 
 type Page = "home" | "find" | "offer" | "rides" | "impact" | "profile";
@@ -409,7 +410,6 @@ export default function App() {
   const [selectedId, setSelectedId] = useState("");
   const [tracking, setTracking] = useState(false);
   const [settlements, setSettlements] = useState<Record<string, { riderId?: string | null; share?: number | null; upiLink?: string | null }[]>>({});
-  const watchedTripIds = [...new Set(store.requests.filter(r => ["ACCEPTED", "DONE"].includes(r.status)).map(r => r.tripId))].sort().join(",");
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30000);
@@ -498,8 +498,6 @@ export default function App() {
   useEffect(() => {
     if (mode !== "cloud") return;
     const cleanup = subscribeCloud(
-      userId,
-      watchedTripIds ? watchedTripIds.split(",") : [],
       () => {
         void reload();
       },
@@ -511,7 +509,7 @@ export default function App() {
     return () => {
       cleanup();
     };
-  }, [mode, reload, userId, watchedTripIds]);
+  }, [mode, reload, userId]);
   useEffect(() => {
     if (mode === "demo") {
       try {
@@ -957,9 +955,33 @@ export default function App() {
             </>
           )}
           {page === "find" && (
-            mode === "cloud" ? <><Heading eyebrow="FIND YOUR PEOPLE" title="Find a ride" description="Real pickup and drop selection is being prepared." /><p className="notice">{workflowMissing}</p></> : <FindRides trips={available} renderTrip={renderTrip} mode={mode} />
+            mode === "cloud" ? (
+              <FindCloud
+                profile={profile}
+                requestedTripIds={store.requests
+                  .filter((r) => r.riderId === userId && ["PENDING", "ACCEPTED"].includes(r.status))
+                  .map((r) => r.tripId)}
+                onRequested={() => {
+                  void reload();
+                  navigate("rides");
+                  setMessage("Request sent. You will see it here when the driver responds.");
+                }}
+              />
+            ) : <FindRides trips={available} renderTrip={renderTrip} mode={mode} />
           )}
-          {page === "offer" && (
+          {page === "offer" && mode === "cloud" && (
+            <OfferCloud
+              profile={profile}
+              onProfile={() => navigate("profile")}
+              onPublished={(tripId, shareRupees) => {
+                void reload();
+                setSelectedId(tripId);
+                navigate("rides");
+                setMessage(`Trip published. Fuel share is ${money(shareRupees)} per rider.`);
+              }}
+            />
+          )}
+          {page === "offer" && mode !== "cloud" && (
             <Offer
               profile={profile}
               busy={busy}
@@ -1151,10 +1173,14 @@ export default function App() {
                           ? "Trip summary"
                           : "Your trip"}
                       </h2>
-                      <RouteMap
-                        trip={selected}
-                        live={selected.status === "ACTIVE"}
-                      />
+                      {mode === "cloud" ? (
+                        <TripMap trip={selected} />
+                      ) : (
+                        <RouteMap
+                          trip={selected}
+                          live={selected.status === "ACTIVE"}
+                        />
+                      )}
                       <article className="panel">
                         <span className="status">{selected.status}</span>
                         <h3>

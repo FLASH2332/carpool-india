@@ -1,13 +1,20 @@
 version: 1
-frontend:
+backend:
   phases:
-    preBuild:
-      commands:
-        - nvm install 22.20.0
-        - nvm use 22.20.0
-        - npm ci
     build:
       commands:
+        - nvm install 22
+        # npm install, not npm ci: the build's npm reads the lock file differently
+        # from older local npm versions, and npm ci fails on that mismatch.
+        - npm install --cache .npm --prefer-offline
+        # A Hosting app that is given AMPLIFY_OUTPUTS_JSON is frontend-only and uses
+        # a backend deployed elsewhere. Any other app deploys the backend here.
+        - if [ -z "$AMPLIFY_OUTPUTS_JSON" ]; then npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID; fi
+frontend:
+  phases:
+    build:
+      commands:
+        - nvm install 22
         - npm run build
   artifacts:
     baseDirectory: dist
@@ -15,4 +22,5 @@ frontend:
       - "**/*"
   cache:
     paths:
+      - .npm/**/*
       - node_modules/**/*

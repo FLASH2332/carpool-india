@@ -1,8 +1,13 @@
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
 import { isLocationConfigured, mapStyleUrl, type LngLat } from '../lib/location'
 import './geo.css'
+
+// MapLibre looks for its worker next to its own script, which does not exist once
+// Vite bundles it; without this the map stays blank.
+maplibregl.setWorkerUrl(workerUrl)
 
 export type MapMarker = { position: LngLat; label?: string; color?: string }
 

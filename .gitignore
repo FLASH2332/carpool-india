@@ -166,3 +166,4 @@ cdk.out
 .claude/settings.local.json
 Claude.me
 CLAUDE.md
+.claude/*
