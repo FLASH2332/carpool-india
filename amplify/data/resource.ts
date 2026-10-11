@@ -1,4 +1,6 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { ensureProfile } from '../functions/ensure-profile/resource';
+import { indexTrip } from '../functions/index-trip/resource';
 
 /**
  * Authorization conventions:
@@ -172,7 +174,29 @@ const schema = a.schema({
     })
     .identifier(['city', 'date'])
     .authorization((allow) => [allow.authenticated().to(['read'])]),
-});
+
+  // Creates or updates the caller's UserProfile, setting orgId and city from
+  // their email domain.
+  ensureProfile: a
+    .mutation()
+    .arguments({ name: a.string(), phone: a.string() })
+    .returns(a.ref('UserProfile'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(ensureProfile)),
+
+  // Publishes the caller's DRAFT trip: fills orgId, city, seatsLeft and
+  // shareRupees, writes its TripCells and sets status OPEN.
+  indexTrip: a
+    .mutation()
+    .arguments({ tripId: a.id().required() })
+    .returns(a.ref('Trip'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(indexTrip)),
+})
+  .authorization((allow) => [
+    allow.resource(ensureProfile),
+    allow.resource(indexTrip),
+  ]);
 
 export type Schema = ClientSchema<typeof schema>;
 
