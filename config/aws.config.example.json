@@ -1,0 +1,28 @@
+{
+  "region": "ap-south-1",
+  "accounts": {
+    "own": { "profile": "greencommute" },
+    "data": {
+      "sourceProfile": "greencommute",
+      "roleArn": "arn:aws:iam::111111111111:role/GreenCommuteAshwin",
+      "externalId": "replace-with-the-id-the-account-owner-gave-you",
+      "sessionName": "ashwin"
+    }
+  },
+  "deploy": { "geo": "own", "aqi": "own" },
+  "geo": {
+    "mapStyle": "VectorEsriNavigation",
+    "politicalView": "",
+    "dataSource": "Esri",
+    "allowedReferrers": ["http://localhost:5173/*", "https://*.amplifyapp.com/*"]
+  },
+  "aqi": {
+    "cities": ["Delhi", "Bengaluru"],
+    "apiKeyParameter": "/greencommute/data-gov-in-api-key",
+    "seed": { "Delhi": 320, "Bengaluru": 85 },
+    "target": {
+      "tableName": "AqiDaily-REPLACE-NONE",
+      "account": "data"
+    }
+  }
+}

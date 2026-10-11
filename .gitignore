@@ -152,3 +152,17 @@ vite.config.ts.timestamp-*
 .amplify
 amplify_outputs*
 amplifyconfiguration*
+
+# docs
+docs/
+
+# per-developer AWS account config (copy config/aws.config.example.json)
+config/aws.config.json
+
+# cdk
+cdk.out
+
+# personal Claude Code settings
+.claude/settings.local.json
+Claude.me
+CLAUDE.md
