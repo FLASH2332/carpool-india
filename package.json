@@ -14,6 +14,7 @@
     "test": "tsx --test src/domain.test.ts"
   },
   "dependencies": {
+    "@turf/turf": "^7.4.0",
     "aws-amplify": "^6.22.1",
     "ngeohash": "^0.6.4",
     "react": "^19.2.8",
