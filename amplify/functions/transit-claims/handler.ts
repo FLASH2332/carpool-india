@@ -148,7 +148,10 @@ export const reviewHandler = async (event: Parameters<Schema['reviewTransitClaim
 };
 // A single Lambda can handle several explicitly authorized schema operations.
 export const handler = async (event: Parameters<typeof submitHandler>[0]) => {
-  switch (event.info.fieldName) {
+  // Amplify invokes the function with the operation name at the top level of the
+  // event; there is no `info` object, whatever the handler type says.
+  const { fieldName } = event as unknown as { fieldName?: string };
+  switch (fieldName ?? event.info?.fieldName) {
     case 'submitTransitClaim': return submitHandler(event);
     case 'transitClaimsToday': return listHandler(event as unknown as Parameters<typeof listHandler>[0]);
     case 'reviewTransitClaim': return reviewHandler(event as unknown as Parameters<typeof reviewHandler>[0]);
