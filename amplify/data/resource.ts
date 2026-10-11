@@ -1,7 +1,12 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { completeTrip } from '../functions/complete-trip/resource';
 import { ensureProfile } from '../functions/ensure-profile/resource';
 import { indexTrip } from '../functions/index-trip/resource';
+import { orgReport } from '../functions/org-report/resource';
+import { requestSeat } from '../functions/request-seat/resource';
+import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
+import { startTrip } from '../functions/start-trip/resource';
 
 /**
  * Authorization conventions:
@@ -232,11 +237,89 @@ const schema = a.schema({
     .returns(a.ref('TripMatch').array())
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(searchTrips)),
+
+  // Rider asks for a seat on an OPEN trip in their organisation.
+  requestSeat: a
+    .mutation()
+    .arguments({
+      tripId: a.id().required(),
+      pickupLat: a.float().required(),
+      pickupLng: a.float().required(),
+      pickupLabel: a.string(),
+      dropLat: a.float().required(),
+      dropLng: a.float().required(),
+      dropLabel: a.string(),
+      sharedKm: a.float(),
+    })
+    .returns(a.ref('RideRequest'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(requestSeat)),
+
+  // Driver accepts (taking a seat) or declines a PENDING request.
+  respondToRequest: a
+    .mutation()
+    .arguments({
+      requestId: a.id().required(),
+      accept: a.boolean().required(),
+    })
+    .returns(a.ref('RideRequest'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(respondToRequest)),
+
+  // Driver starts their OPEN trip: status becomes ACTIVE.
+  startTrip: a
+    .mutation()
+    .arguments({ tripId: a.id().required() })
+    .returns(a.ref('Trip'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(startTrip)),
+
+  RiderSettlement: a.customType({
+    riderId: a.id(),
+    kgCO2: a.float(),
+    rupeesSaved: a.float(),
+    share: a.float(), // rupees the rider owes the driver
+    upiLink: a.string(), // null if the driver has no upiVpa
+  }),
+
+  DriverTotals: a.customType({
+    kmShared: a.float(),
+    kgCO2: a.float(),
+    rupees: a.float(), // sum of the riders' shares
+    points: a.integer(),
+  }),
+
+  TripCompletion: a.customType({
+    perRider: a.ref('RiderSettlement').array(),
+    driverTotals: a.ref('DriverTotals'),
+  }),
+
+  // Driver ends their ACTIVE trip: status DONE, impact written for everyone.
+  completeTrip: a
+    .mutation()
+    .arguments({ tripId: a.id().required() })
+    .returns(a.ref('TripCompletion'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(completeTrip)),
+
+  // OrgAdmins only: builds the caller's organisation report for a month
+  // (YYYY-MM) and returns a download URL valid for 15 minutes.
+  orgReport: a
+    .query()
+    .arguments({ month: a.string().required() })
+    .returns(a.string())
+    .authorization((allow) => [allow.group('OrgAdmins')])
+    .handler(a.handler.function(orgReport)),
 })
   .authorization((allow) => [
+    allow.resource(orgReport),
+    allow.resource(completeTrip),
+    allow.resource(startTrip),
     allow.resource(ensureProfile),
     allow.resource(indexTrip),
     allow.resource(searchTrips),
+    allow.resource(requestSeat),
+    allow.resource(respondToRequest),
   ]);
 
 export type Schema = ClientSchema<typeof schema>;
