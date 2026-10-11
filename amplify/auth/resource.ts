@@ -9,6 +9,8 @@ export const auth = defineAuth({
   loginWith: {
     email: true,
   },
+  // Organisation admins; they can run orgReport. Add users in the Cognito console.
+  groups: ['OrgAdmins'],
   triggers: {
     preSignUp,
   },

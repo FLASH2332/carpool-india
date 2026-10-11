@@ -2,6 +2,7 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 import { completeTrip } from '../functions/complete-trip/resource';
 import { ensureProfile } from '../functions/ensure-profile/resource';
 import { indexTrip } from '../functions/index-trip/resource';
+import { orgReport } from '../functions/org-report/resource';
 import { requestSeat } from '../functions/request-seat/resource';
 import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
@@ -300,8 +301,18 @@ const schema = a.schema({
     .returns(a.ref('TripCompletion'))
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(completeTrip)),
+
+  // OrgAdmins only: builds the caller's organisation report for a month
+  // (YYYY-MM) and returns a download URL valid for 15 minutes.
+  orgReport: a
+    .query()
+    .arguments({ month: a.string().required() })
+    .returns(a.string())
+    .authorization((allow) => [allow.group('OrgAdmins')])
+    .handler(a.handler.function(orgReport)),
 })
   .authorization((allow) => [
+    allow.resource(orgReport),
     allow.resource(completeTrip),
     allow.resource(startTrip),
     allow.resource(ensureProfile),

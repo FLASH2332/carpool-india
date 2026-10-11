@@ -4,10 +4,12 @@ import { data } from './data/resource';
 import { completeTrip } from './functions/complete-trip/resource';
 import { ensureProfile } from './functions/ensure-profile/resource';
 import { indexTrip } from './functions/index-trip/resource';
+import { orgReport } from './functions/org-report/resource';
 import { requestSeat } from './functions/request-seat/resource';
 import { respondToRequest } from './functions/respond-to-request/resource';
 import { searchTrips } from './functions/search-trips/resource';
 import { startTrip } from './functions/start-trip/resource';
+import { storage } from './storage/resource';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -18,10 +20,12 @@ const backend = defineBackend({
   completeTrip,
   ensureProfile,
   indexTrip,
+  orgReport,
   requestSeat,
   respondToRequest,
   searchTrips,
   startTrip,
+  storage,
 });
 
 // Sandbox deploys use CloudFormation Express mode, which fails any update to the
