@@ -52,6 +52,12 @@ export function geohashOf(point: LngLat): string {
   return ngeohash.encode(point[1], point[0], GEOHASH_PRECISION);
 }
 
+/** The point's geohash cell plus its 8 neighbours. */
+export function cellAndNeighbours(point: LngLat): string[] {
+  const cell = geohashOf(point);
+  return [cell, ...ngeohash.neighbors(cell)];
+}
+
 /** Distinct geohash cells the line passes through, sampled every `stepKm`. */
 export function cellsAlongLine(line: LngLat[], stepKm = 0.2): string[] {
   return [...new Set(sampleLine(line, stepKm).map(geohashOf))];

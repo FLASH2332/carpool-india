@@ -61,6 +61,8 @@ export const handler: Schema['indexTrip']['functionHandler'] = async (event) => 
     (routeKm * fuelPrice) / mileage / (seatsTotal + 1),
   );
 
+  // Normalised to UTC so searchTrips can range-query the index as strings.
+  const departAt = new Date(trip.departAt).toISOString();
   const cells = cellsAlongLine(routeLine, SAMPLE_STEP_KM);
   for (let i = 0; i < cells.length; i += WRITE_BATCH) {
     await Promise.all(
@@ -69,7 +71,7 @@ export const handler: Schema['indexTrip']['functionHandler'] = async (event) => 
         const result = await client.models.TripCell.create({
           id: `${tripId}#${cell}`,
           cell,
-          departAt: trip.departAt,
+          departAt,
           tripId,
           orgId: driver.orgId,
         });
