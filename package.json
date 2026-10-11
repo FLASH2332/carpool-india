@@ -18,6 +18,7 @@
     "seed:aqi": "tsx scripts/seed-aqi.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1149.0",
     "@aws-sdk/client-dynamodb": "^3.1149.0",
     "@aws-sdk/client-location": "^3.1149.0",
     "@aws-sdk/client-s3": "^3.1149.0",

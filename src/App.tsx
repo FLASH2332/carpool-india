@@ -22,6 +22,7 @@ import {
 import type { Profile, Store, Trip } from "./domain";
 import {
   client,
+  isPlatformAdmin,
   loadCloud,
   saveCloudProfile,
   subscribeCloud,
@@ -31,10 +32,12 @@ import {
   completeCloud,
 } from "./cloud";
 import { Rewards } from "./RewardsPanel";
+import { AdminReport } from "./AdminReport";
+import { PlatformAdmin } from "./PlatformAdmin";
 import { FindCloud, OfferCloud, TripMap } from "./CloudRides";
 import "./App.css";
 
-type Page = "home" | "find" | "offer" | "rides" | "impact" | "profile";
+type Page = "home" | "find" | "offer" | "rides" | "impact" | "profile" | "admin";
 const pages: [Page, string, string][] = [
   ["home", "Overview", "◈"],
   ["find", "Find a ride", "⌕"],
@@ -42,6 +45,8 @@ const pages: [Page, string, string][] = [
   ["rides", "My rides", "↗"],
   ["impact", "My impact", "◎"],
   ["profile", "My profile", "○"],
+  // Shown in the menu only to PlatformAdmins.
+  ["admin", "Platform admin", "⚙"],
 ];
 const empty: Store = {
   profiles: [],
@@ -432,6 +437,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState("");
   const [tracking, setTracking] = useState(false);
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+  useEffect(() => {
+    if (mode !== "cloud") return;
+    let cancelled = false;
+    isPlatformAdmin()
+      .then((yes) => {
+        if (!cancelled) setPlatformAdmin(yes);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      setPlatformAdmin(false);
+    };
+  }, [mode, userId]);
   const [settlements, setSettlements] = useState<Record<string, { riderId?: string | null; share?: number | null; upiLink?: string | null }[]>>({});
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -757,7 +776,7 @@ export default function App() {
         <Logo />
         <span className="nav-caption">YOUR DAILY JOURNEY</span>
         <nav>
-          {pages.map(([id, label, icon]) => (
+          {pages.filter(([id]) => id !== "admin" || platformAdmin).map(([id, label, icon]) => (
             <button
               key={id}
               aria-current={page === id ? "page" : undefined}
@@ -1024,6 +1043,7 @@ export default function App() {
               }
             />
           )}
+          {page === "admin" && mode === "cloud" && platformAdmin && <PlatformAdmin />}
           {page === "profile" && !loading && (
             <ProfileForm
               key={userId}
@@ -1381,6 +1401,7 @@ export default function App() {
                 />
               </div>
               <Rewards store={store} userId={userId} demo={mode === "demo"} kgCO2={totals.co2} orgId={profile?.orgId} />
+              {mode === "cloud" && <AdminReport key={userId} />}
               <section className="panel impact-history">
                 <h2>Your journey so far</h2>
                 {myImpact.length ? (

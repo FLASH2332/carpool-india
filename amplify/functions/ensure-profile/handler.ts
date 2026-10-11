@@ -1,15 +1,22 @@
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
+import {
+  AdminAddUserToGroupCommand,
+  CognitoIdentityProviderClient,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import type { AppSyncIdentityCognito } from 'aws-lambda';
 import { env } from '$amplify/env/ensure-profile';
 import type { Schema } from '../../data/resource';
 import { unwrap } from '../../shared/data';
-import { orgForEmail } from '../../shared/org';
+import { isListedAdmin, normaliseEmail, orgForEmail } from '../../shared/org';
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
 Amplify.configure(resourceConfig, libraryOptions);
 const client = generateClient<Schema>();
+// USER_POOL_ID and the permission to add to the group are set in backend.ts.
+const cognito = new CognitoIdentityProviderClient({});
+const ORG_ADMINS_GROUP = 'OrgAdmins';
 
 /**
  * Email of the caller. ID tokens carry it as a claim; access tokens (which the
@@ -65,6 +72,10 @@ export const handler: Schema['ensureProfile']['functionHandler'] = async (
     await client.models.Organization.get({ id: org.orgId }),
     'Reading organisation',
   );
+  // factors.ts only seeds the admin list; after that it lives in the database
+  // and is managed with setOrgAdmin.
+  const seedAdmins = (org.adminEmails ?? []).map(normaliseEmail);
+  let adminEmails = existingOrg?.adminEmails;
   if (!existingOrg) {
     unwrap(
       await client.models.Organization.create({
@@ -72,9 +83,11 @@ export const handler: Schema['ensureProfile']['functionHandler'] = async (
         domain: org.domain,
         name: org.name,
         city: org.city,
+        adminEmails: seedAdmins,
       }),
       'Creating organisation',
     );
+    adminEmails = seedAdmins;
   }
 
   const { name, phone } = event.arguments;
@@ -95,5 +108,34 @@ export const handler: Schema['ensureProfile']['functionHandler'] = async (
   const saved = existing
     ? await client.models.UserProfile.update(fields)
     : await client.models.UserProfile.create(fields);
-  return unwrap(saved, 'Saving profile');
+  const profile = unwrap(saved, 'Saving profile');
+
+  // Admin promotion. Nothing in here may block sign-in; a failure is logged and
+  // retried on the next sign-in.
+  try {
+    if (existingOrg && adminEmails == null) {
+      // Organisation row from before adminEmails existed: seed it once.
+      unwrap(
+        await client.models.Organization.update({
+          id: org.orgId,
+          adminEmails: seedAdmins,
+        }),
+        'Seeding organisation admins',
+      );
+      adminEmails = seedAdmins;
+    }
+    if (isListedAdmin(email, adminEmails)) {
+      // Idempotent.
+      await cognito.send(
+        new AdminAddUserToGroupCommand({
+          UserPoolId: process.env.USER_POOL_ID,
+          Username: identity.username,
+          GroupName: ORG_ADMINS_GROUP,
+        }),
+      );
+    }
+  } catch (error) {
+    console.error('Could not apply organisation admin membership', error);
+  }
+  return profile;
 };

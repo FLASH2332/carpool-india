@@ -6,6 +6,7 @@ import { orgReport } from '../functions/org-report/resource';
 import { requestSeat } from '../functions/request-seat/resource';
 import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
+import { setOrgAdmin } from '../functions/set-org-admin/resource';
 import { startTrip } from '../functions/start-trip/resource';
 import { createDraftTrip } from '../functions/create-draft-trip/resource';
 import { updateTripLocation } from '../functions/update-trip-location/resource';
@@ -49,10 +50,17 @@ export const schema = a.schema({
       domain: a.string().required(),
       name: a.string(),
       city: a.string(),
+      // Lower-cased emails of the organisation's admins. Null until first seeded
+      // from factors.ts by ensureProfile; written only by Lambdas.
+      adminEmails: a.string().array(),
     })
     .secondaryIndexes((index) => [index('domain')])
-    // No Cognito client operations; schema-level function grants provide IAM access.
-    .authorization(allow => [allow.authenticated().to([])]),
+    // Lambdas write through schema-level function grants; only platform admins
+    // can read organisations from the app.
+    .authorization(allow => [
+      allow.authenticated().to([]),
+      allow.group('PlatformAdmins').to(['read']),
+    ]),
 
   UserProfile: a
     .model({
@@ -318,8 +326,22 @@ export const schema = a.schema({
     .returns(a.string())
     .authorization((allow) => [allow.group('OrgAdmins')])
     .handler(a.handler.function(orgReport)),
+
+  // PlatformAdmins only: adds or removes an organisation admin, in the
+  // organisation's adminEmails and (if the user exists) the OrgAdmins group.
+  setOrgAdmin: a
+    .mutation()
+    .arguments({
+      orgId: a.id().required(),
+      email: a.string().required(),
+      isAdmin: a.boolean().required(),
+    })
+    .returns(a.ref('Organization'))
+    .authorization((allow) => [allow.group('PlatformAdmins')])
+    .handler(a.handler.function(setOrgAdmin)),
 })
   .authorization((allow) => [
+    allow.resource(setOrgAdmin),
     allow.resource(createDraftTrip),
     allow.resource(updateTripLocation),
     allow.resource(communityLeaderboard),

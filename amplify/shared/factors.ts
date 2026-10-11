@@ -34,19 +34,25 @@ export const DEFAULT_MILEAGE_KMPL = 15;
 /**
  * Email domain -> organisation.
  * TODO: placeholder organisations, replace with real ones.
+ *
+ * `adminEmails` only seeds the organisation's admin list the first time the
+ * organisation is created in the database. After that the list lives on the
+ * Organization row and is changed with the setOrgAdmin mutation, not here.
  */
 export const ORG_DOMAINS: Record<
   string,
-  { orgId: string; name: string; city: string }
+  { orgId: string; name: string; city: string; adminEmails?: string[] }
 > = {
   'example-corp.com': {
     orgId: 'org-example-corp',
     name: 'Example Corp',
     city: 'Bengaluru',
+    adminEmails: ['admin@example-corp.com'], // TODO
   },
   'example-college.ac.in': {
     orgId: 'org-example-college',
     name: 'Example College',
     city: 'Delhi',
+    adminEmails: ['driver@example-college.ac.in'], // TODO
   },
 };

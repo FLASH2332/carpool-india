@@ -1,4 +1,5 @@
 import "./configure";
+import { fetchAuthSession } from "aws-amplify/auth";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import type { Profile, Store, Trip } from "./domain";
@@ -162,6 +163,47 @@ export async function completeCloud(tripId: string) {
   } catch (error) {
     throw Error(`${error instanceof Error ? error.message : "Trip completion failed."} Refresh and ask your organiser to check the trip before retrying; some impact records may already have been written.`);
   }
+}
+
+/** Whether the signed-in user is in the given Cognito group. */
+async function inGroup(group: string) {
+  // Refresh the token: the group may have been added moments ago.
+  const { tokens } = await fetchAuthSession({ forceRefresh: true });
+  const groups = tokens?.accessToken.payload["cognito:groups"];
+  return Array.isArray(groups) && groups.includes(group);
+}
+export const isOrgAdmin = () => inGroup("OrgAdmins");
+export const isPlatformAdmin = () => inGroup("PlatformAdmins");
+
+export type OrgAdmins = { id: string; name: string; domain: string; adminEmails: string[] };
+const toOrgAdmins = (org: { id: string; name?: string | null; domain: string; adminEmails?: (string | null)[] | null }): OrgAdmins => ({
+  id: org.id,
+  name: org.name || org.id,
+  domain: org.domain,
+  adminEmails: (org.adminEmails ?? []).filter((e): e is string => !!e),
+});
+/** Every organisation with its admin emails. PlatformAdmins only. */
+export async function listOrganisations(): Promise<OrgAdmins[]> {
+  const orgs: OrgAdmins[] = [];
+  let nextToken: string | null | undefined;
+  do {
+    const page = await client.models.Organization.list({ nextToken });
+    orgs.push(...checked(page).map(toOrgAdmins));
+    nextToken = page.nextToken;
+  } while (nextToken);
+  return orgs.sort((a, b) => a.name.localeCompare(b.name));
+}
+/** Adds or removes one organisation admin. PlatformAdmins only. */
+export async function setOrgAdmin(orgId: string, email: string, isAdmin: boolean) {
+  const org = checked(await client.mutations.setOrgAdmin({ orgId, email, isAdmin }));
+  if (!org) throw Error("The change was not confirmed. Refresh and try again.");
+  return toOrgAdmins(org);
+}
+/** Short-lived download link for the caller's organisation report (month is YYYY-MM). */
+export async function orgReportUrl(month: string) {
+  const url = checked(await client.queries.orgReport({ month }));
+  if (!url) throw Error("The report could not be generated.");
+  return url;
 }
 
 export async function loadLeaderboard(_orgId: string, month: string) {

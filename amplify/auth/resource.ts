@@ -9,8 +9,11 @@ export const auth = defineAuth({
   loginWith: {
     email: true,
   },
-  // Organisation admins; they can run orgReport. Add users in the Cognito console.
-  groups: ['OrgAdmins'],
+  // OrgAdmins: an organisation's admins; they can run orgReport. Managed through
+  // setOrgAdmin and ensureProfile.
+  // PlatformAdmins: us; they manage every organisation's admins. Added by hand in
+  // the Cognito console.
+  groups: ['OrgAdmins', 'PlatformAdmins'],
   triggers: {
     preSignUp,
   },

@@ -8,6 +8,7 @@ import { orgReport } from './functions/org-report/resource';
 import { requestSeat } from './functions/request-seat/resource';
 import { respondToRequest } from './functions/respond-to-request/resource';
 import { searchTrips } from './functions/search-trips/resource';
+import { setOrgAdmin } from './functions/set-org-admin/resource';
 import { startTrip } from './functions/start-trip/resource';
 import { storage } from './storage/resource';
 import { createDraftTrip } from './functions/create-draft-trip/resource';
@@ -27,6 +28,7 @@ const backend = defineBackend({
   requestSeat,
   respondToRequest,
   searchTrips,
+  setOrgAdmin,
   startTrip,
   storage,
   createDraftTrip,
@@ -39,6 +41,20 @@ const backend = defineBackend({
 // email attribute. Email is still mandatory because it is the sign-in name.
 backend.auth.resources.cfnResources.cfnUserPool.addPropertyDeletionOverride(
   'Schema',
+);
+
+// ensureProfile adds the organisation's listed admins to the OrgAdmins group.
+const userPool = backend.auth.resources.userPool;
+backend.ensureProfile.addEnvironment('USER_POOL_ID', userPool.userPoolId);
+userPool.grant(backend.ensureProfile.resources.lambda, 'cognito-idp:AdminAddUserToGroup');
+
+// setOrgAdmin finds a user by email and adds them to or removes them from OrgAdmins.
+backend.setOrgAdmin.addEnvironment('USER_POOL_ID', userPool.userPoolId);
+userPool.grant(
+  backend.setOrgAdmin.resources.lambda,
+  'cognito-idp:ListUsers',
+  'cognito-idp:AdminAddUserToGroup',
+  'cognito-idp:AdminRemoveUserFromGroup',
 );
 
 // respondToRequest transactionally changes request status, seat count and rider access.
