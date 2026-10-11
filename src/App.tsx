@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   confirmResetPassword,
+  confirmSignIn,
   confirmSignUp,
   getCurrentUser,
   resendSignUpCode,
@@ -177,7 +178,7 @@ function Auth({
   onDemo: () => void;
 }) {
   const [step, setStep] = useState<
-    "login" | "signup" | "confirm" | "reset" | "reset-confirm"
+    "login" | "signup" | "confirm" | "reset" | "reset-confirm" | "new-password"
   >("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -218,6 +219,14 @@ function Auth({
         setCode("");
         setStep("login");
         setMessage("Password updated. Sign in to continue.");
+      } else if (step === "new-password") {
+        // Accounts created by an admin start with a temporary password.
+        const result = await confirmSignIn({ challengeResponse: password });
+        if (!result.isSignedIn)
+          throw Error(`Sign-in requires ${result.nextStep.signInStep}.`);
+        const user = await getCurrentUser();
+        setPassword("");
+        onLogin(user.userId, username);
       } else {
         const result = await signIn({ username, password });
         if (result.isSignedIn) {
@@ -227,6 +236,15 @@ function Auth({
         } else if (result.nextStep.signInStep === "CONFIRM_SIGN_UP") {
           setStep("confirm");
           setMessage("Verify your email before signing in.");
+        } else if (
+          result.nextStep.signInStep ===
+          "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED"
+        ) {
+          setStep("new-password");
+          setPassword("");
+          setMessage(
+            "Your password was temporary. Choose a new one to finish signing in.",
+          );
         } else {
           setMessage(
             `Sign-in requires ${result.nextStep.signInStep}. This account needs an additional authentication step.`,
@@ -249,6 +267,7 @@ function Auth({
     confirm: "Check your inbox.",
     reset: "Let’s get you back in.",
     "reset-confirm": "Choose a new password.",
+    "new-password": "Choose a new password.",
   }[step];
   return (
     <div className="auth-layout">
@@ -287,9 +306,13 @@ function Auth({
               onChange={(e) => setEmail(e.target.value)}
             />
           </Field>
-          {["login", "signup", "reset-confirm"].includes(step) && (
+          {["login", "signup", "reset-confirm", "new-password"].includes(step) && (
             <Field
-              label={step === "reset-confirm" ? "New password" : "Password"}
+              label={
+                ["reset-confirm", "new-password"].includes(step)
+                  ? "New password"
+                  : "Password"
+              }
             >
               <input
                 type="password"
