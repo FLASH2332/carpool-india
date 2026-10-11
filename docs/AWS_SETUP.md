@@ -20,9 +20,11 @@ No screenshots prove that a Builder ID exists. Browser account inspection was un
 
 ## CLI authentication
 
-The original CLI was **2.34.12**, without Agent Toolkit commands. The official installer is being used to update it. The existing `greencommute` profile remains configured for Mumbai; use `kapil-aws` for Sydney. Credentials must be verified before deployment.
+AWS CLI **2.37.12** and `uv` **0.13.0** are now installed. The original system CLI was **2.34.12**, without Agent Toolkit commands, and may still resolve first in an existing terminal. The existing `greencommute` profile remains configured for Mumbai; `kapil-aws` is configured for Sydney and JSON output. Credentials must be verified before deployment.
 
 ```powershell
+$env:Path = "$env:LOCALAPPDATA\Programs\Amazon\AWSCLIV2;$env:USERPROFILE\.local\bin;$env:Path"
+aws --version
 aws configure set region ap-southeast-2 --profile kapil-aws
 aws login --profile kapil-aws --region ap-southeast-2
 aws sts get-caller-identity --profile kapil-aws --region ap-southeast-2
@@ -44,7 +46,7 @@ The backend belongs to Flash's sandbox. Keeping it requires Flash to leave it ru
 5. Add environment variable `AMPLIFY_OUTPUTS_JSON` containing the entire current `amplify_outputs.json` supplied by Flash, as one JSON string. `prebuild` writes it into the build workspace and validates Mumbai Auth/Data. These are frontend connection details, not AWS CLI credentials. Never put IAM secrets in this variable or any Vite variable.
 6. Build/deploy; open the returned `amplifyapp.com` URL. Test the labelled demo immediately, then real Cognito sign-in/profile against the sandbox. The full cloud ride flow still needs the backend/map handoff.
 
-Keep Node **22.20.0 or newer within Node 22**, as used locally; the installed Vite version requires a recent Node runtime. Configure the build image to that version if needed. All navigation currently stays at `/` (no deep-link rewrite is required).
+The Hosting build selects Node **22.20.0**, as used locally; the installed Vite version requires a recent Node runtime. All navigation currently stays at `/` (no deep-link rewrite is required).
 
 ## Agent Toolkit for AWS
 
