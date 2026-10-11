@@ -2,6 +2,14 @@
 
 Flash's existing backend uses Mumbai **ap-south-1**. Kapil selected Sydney **ap-southeast-2** for his new AWS experience project and the separate CLI profile **kapil-aws**. A CLI region setting does not migrate Flash's resources. The commute city is independent of the AWS region.
 
+## Verified deployment — 11 October 2026
+
+- Live frontend: https://demo.dl7lvp454dd36.amplifyapp.com/
+- Amplify app: `greencommute-india`, ID `dl7lvp454dd36`, branch `demo`, region `ap-southeast-2`.
+- A manual ZIP deployment of the tested `dist/` build completed with job `1` status `SUCCEED`. The hosted login screen and interactive demo loaded successfully with no browser console errors.
+- This app is not connected to GitHub auto-deployment yet. The owner must authorize repository access through Amplify before push-triggered builds can be enabled. Changes to the frontend branch do not automatically update this manual deployment.
+- Real ride workflow functions, Amazon Location integration and backend authorization fixes remain pending; see the backend handoff. Hosting does not complete those features.
+
 ## Account distinctions
 
 - **AWS Builder ID:** profile for Builder Center and developer/learning tools. Separate from an AWS cloud account; it does not grant Amplify deployment access or restore expired Academy courses/credits.

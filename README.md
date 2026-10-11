@@ -3,6 +3,8 @@
 Office and college carpooling. React + Vite + TypeScript frontend, AWS Amplify Gen 2 backend
 (Cognito, AppSync + DynamoDB; Lambda workflows pending) in `ap-south-1`.
 
+[Hosted demo](https://demo.dl7lvp454dd36.amplifyapp.com/) — frontend hosted in Kapil's Sydney project, connected to Flash's Mumbai sandbox. This is a manual deployment; GitHub auto-deployment is not connected yet.
+
 The React app includes authentication, profiles, an overview, ride search, ride offers,
 requests, a live-trip panel, summaries and My Impact. Explore the labelled browser-local
 demo to click through a full rider/driver journey. Cognito and existing AppSync model
