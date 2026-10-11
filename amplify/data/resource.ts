@@ -7,19 +7,22 @@ import { requestSeat } from '../functions/request-seat/resource';
 import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
 import { startTrip } from '../functions/start-trip/resource';
+import { createDraftTrip } from '../functions/create-draft-trip/resource';
+import { updateTripLocation } from '../functions/update-trip-location/resource';
+import { communityLeaderboard } from '../functions/community-leaderboard/resource';
 
 /**
  * Authorization conventions:
- * - Every signed-in user can read every model.
+ * - Private reads are owner/participant-only; organisation discovery uses scoped functions.
  * - Models with no further rule are written by Lambdas only. Each Lambda gets
  *   access through a schema-level `allow.resource(fn)` rule, added alongside the
  *   function that needs it.
- * - UserProfile and Trip are also writable by their owner (matched on Cognito sub).
+ * - Profiles permit owner updates; trips and participant membership are server-written.
  */
 
 // Shared by the Trip model and MatchedTrip (the copy searchTrips returns),
 // because a custom type cannot reference a model.
-const tripFields = () => ({
+const discoveryFields = () => ({
   driverId: a.id(), // Cognito sub of the driver
   orgId: a.id(),
   city: a.string(),
@@ -36,12 +39,11 @@ const tripFields = () => ({
   routeKm: a.float(),
   shareRupees: a.float(),
   status: a.ref('TripStatus'),
-  lastLat: a.float(),
-  lastLng: a.float(),
-  lastAt: a.datetime(),
 });
+const tripFields = () => ({ ...discoveryFields(), lastLat: a.float(), lastLng: a.float(), lastAt: a.datetime() });
 
-const schema = a.schema({
+
+export const schema = a.schema({
   Organization: a
     .model({
       domain: a.string().required(),
@@ -49,21 +51,20 @@ const schema = a.schema({
       city: a.string(),
     })
     .secondaryIndexes((index) => [index('domain')])
-    .authorization((allow) => [allow.authenticated().to(['read'])]),
+    // No Cognito client operations; schema-level function grants provide IAM access.
+    .authorization(allow => [allow.authenticated().to([])]),
 
   UserProfile: a
     .model({
       userId: a.id().required(), // Cognito sub
       name: a.string(),
       phone: a.string(),
-      email: a.email(),
-      // orgId is read-only for clients; Lambdas set it. Totals and points can
-      // only be written by the owner on create (so the default 0 applies), then
-      // by Lambdas.
+      email: a.email().authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
+      // Membership and totals are server-managed, including initial creation.
       orgId: a
         .id()
-        .authorization((allow) => [allow.authenticated().to(['read'])]),
-      city: a.string(),
+        .authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
+      city: a.string().authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
       vehicleType: a.enum([
         'NONE',
         'HATCHBACK',
@@ -80,55 +81,42 @@ const schema = a.schema({
       totalKm: a
         .float()
         .default(0)
-        .authorization((allow) => [
-          allow.authenticated().to(['read']),
-          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
-        ]),
+        .authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
       totalKgCO2: a
         .float()
         .default(0)
-        .authorization((allow) => [
-          allow.authenticated().to(['read']),
-          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
-        ]),
+        .authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
       totalRupees: a
         .float()
         .default(0)
-        .authorization((allow) => [
-          allow.authenticated().to(['read']),
-          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
-        ]),
+        .authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
       points: a
         .integer()
         .default(0)
-        .authorization((allow) => [
-          allow.authenticated().to(['read']),
-          allow.ownerDefinedIn('userId').identityClaim('sub').to(['create']),
-        ]),
+        .authorization(allow => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
     })
     .identifier(['userId'])
     .authorization((allow) => [
-      allow.authenticated().to(['read']),
       allow
         .ownerDefinedIn('userId')
         .identityClaim('sub')
-        .to(['create', 'update']),
+        .to(['read', 'update']),
     ]),
 
   TripStatus: a.enum(['DRAFT', 'OPEN', 'ACTIVE', 'DONE', 'CANCELLED']),
 
   Trip: a
-    .model(tripFields())
+    .model({ ...tripFields(), riderIds: a.string().array() })
     .secondaryIndexes((index) => [
       index('driverId'),
       index('orgId').sortKeys(['departAt']),
     ])
     .authorization((allow) => [
-      allow.authenticated().to(['read']),
       allow
         .ownerDefinedIn('driverId')
         .identityClaim('sub')
-        .to(['create', 'update']),
+        .to(['read']),
+      allow.ownersDefinedIn('riderIds').identityClaim('sub').to(['read']),
     ]),
 
   TripCell: a
@@ -139,7 +127,7 @@ const schema = a.schema({
       orgId: a.id(),
     })
     .secondaryIndexes((index) => [index('cell').sortKeys(['departAt'])])
-    .authorization((allow) => [allow.authenticated().to(['read'])]),
+    .authorization(allow => [allow.authenticated().to([])]),
 
   RideRequest: a
     .model({
@@ -156,7 +144,10 @@ const schema = a.schema({
       status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED', 'DONE']),
     })
     .secondaryIndexes((index) => [index('tripId'), index('riderId')])
-    .authorization((allow) => [allow.authenticated().to(['read'])]),
+    .authorization((allow) => [
+      allow.ownerDefinedIn('riderId').identityClaim('sub').to(['read']),
+      allow.ownerDefinedIn('driverId').identityClaim('sub').to(['read']),
+    ]),
 
   ImpactEntry: a
     .model({
@@ -175,7 +166,7 @@ const schema = a.schema({
       index('userId'),
       index('orgId').sortKeys(['month']),
     ])
-    .authorization((allow) => [allow.authenticated().to(['read'])]),
+    .authorization((allow) => [allow.ownerDefinedIn('userId').identityClaim('sub').to(['read'])]),
 
   AqiDaily: a
     .model({
@@ -209,7 +200,7 @@ const schema = a.schema({
   // Same fields as the Trip model.
   MatchedTrip: a.customType({
     id: a.id().required(),
-    ...tripFields(),
+    ...discoveryFields(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
   }),
@@ -302,6 +293,23 @@ const schema = a.schema({
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(completeTrip)),
 
+  createDraftTrip: a.mutation()
+    .arguments({ startLabel: a.string().required(), endLabel: a.string().required(), startLat: a.float().required(), startLng: a.float().required(), endLat: a.float().required(), endLng: a.float().required(), departAt: a.datetime().required(), seatsTotal: a.integer().required(), routeLine: a.json().required(), routeKm: a.float().required() })
+    .returns(a.ref('Trip'))
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(createDraftTrip)),
+  updateTripLocation: a.mutation()
+    .arguments({ tripId: a.id().required(), lat: a.float().required(), lng: a.float().required() })
+    .returns(a.ref('Trip'))
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(updateTripLocation)),
+  CommunityStanding: a.customType({ userId: a.id().required(), name: a.string().required(), kgCO2: a.float().required(), points: a.integer().required(), trips: a.integer().required() }),
+  communityLeaderboard: a.query()
+    .arguments({ month: a.string().required() })
+    .returns(a.ref('CommunityStanding').array())
+    .authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(communityLeaderboard)),
+
   // OrgAdmins only: builds the caller's organisation report for a month
   // (YYYY-MM) and returns a download URL valid for 15 minutes.
   orgReport: a
@@ -312,6 +320,9 @@ const schema = a.schema({
     .handler(a.handler.function(orgReport)),
 })
   .authorization((allow) => [
+    allow.resource(createDraftTrip),
+    allow.resource(updateTripLocation),
+    allow.resource(communityLeaderboard),
     allow.resource(orgReport),
     allow.resource(completeTrip),
     allow.resource(startTrip),

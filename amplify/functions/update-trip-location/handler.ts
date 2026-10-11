@@ -1,0 +1,22 @@
+import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
+import { Amplify } from 'aws-amplify';
+import { generateClient } from 'aws-amplify/data';
+import type { AppSyncIdentityCognito } from 'aws-lambda';
+import { env } from '$amplify/env/update-trip-location';
+import type { Schema } from '../../data/resource';
+import { unwrap } from '../../shared/data';
+const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
+Amplify.configure(resourceConfig, libraryOptions);
+const client = generateClient<Schema>();
+import { requireActiveDriver, requireSameOrganisation, validatePoint } from '../../shared/access';
+export const handler: Schema['updateTripLocation']['functionHandler'] = async event => {
+  const identity = event.identity as AppSyncIdentityCognito | null;
+  if (!identity?.sub) throw Error('Not signed in.');
+  const { tripId, lat, lng } = event.arguments;
+  validatePoint(lat, lng);
+  const trip = unwrap(await client.models.Trip.get({ id: tripId }), 'Reading trip');
+  requireActiveDriver(trip, identity.sub);
+  const driver = unwrap(await client.models.UserProfile.get({ userId: identity.sub }), 'Reading driver');
+  requireSameOrganisation(trip, driver);
+  return unwrap(await client.models.Trip.update({ id: tripId, lastLat: lat, lastLng: lng, lastAt: new Date().toISOString() }), 'Updating location');
+};
