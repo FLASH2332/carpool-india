@@ -4,6 +4,7 @@ import { indexTrip } from '../functions/index-trip/resource';
 import { requestSeat } from '../functions/request-seat/resource';
 import { respondToRequest } from '../functions/respond-to-request/resource';
 import { searchTrips } from '../functions/search-trips/resource';
+import { startTrip } from '../functions/start-trip/resource';
 
 /**
  * Authorization conventions:
@@ -262,8 +263,17 @@ const schema = a.schema({
     .returns(a.ref('RideRequest'))
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(respondToRequest)),
+
+  // Driver starts their OPEN trip: status becomes ACTIVE.
+  startTrip: a
+    .mutation()
+    .arguments({ tripId: a.id().required() })
+    .returns(a.ref('Trip'))
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(startTrip)),
 })
   .authorization((allow) => [
+    allow.resource(startTrip),
     allow.resource(ensureProfile),
     allow.resource(indexTrip),
     allow.resource(searchTrips),

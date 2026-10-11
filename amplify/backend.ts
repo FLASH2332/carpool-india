@@ -6,6 +6,7 @@ import { indexTrip } from './functions/index-trip/resource';
 import { requestSeat } from './functions/request-seat/resource';
 import { respondToRequest } from './functions/respond-to-request/resource';
 import { searchTrips } from './functions/search-trips/resource';
+import { startTrip } from './functions/start-trip/resource';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -18,6 +19,7 @@ const backend = defineBackend({
   requestSeat,
   respondToRequest,
   searchTrips,
+  startTrip,
 });
 
 // respondToRequest takes a seat with a conditional write straight to the Trip
