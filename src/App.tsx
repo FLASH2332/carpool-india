@@ -1402,8 +1402,8 @@ export default function App() {
                 />
               </div>
               <Rewards store={store} userId={userId} demo={mode === "demo"} kgCO2={totals.co2} orgId={profile?.orgId} />
-              {mode === "cloud" && <AdminReport key={userId} />}
-              {mode === "cloud" && <TransitPanel key={userId} eligible={Boolean(profile && profile.vehicleType !== 'NONE')} onRefresh={reload} />}
+              {mode === "cloud" && <AdminReport key={`report-${userId}`} />}
+              {mode === "cloud" && <TransitPanel key={`transit-${userId}`} eligible={Boolean(profile && profile.vehicleType !== 'NONE')} onRefresh={reload} />}
               <section className="panel impact-history">
                 <h2>Your journey so far</h2>
                 {myImpact.length ? (

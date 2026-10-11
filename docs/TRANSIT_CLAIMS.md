@@ -41,6 +41,8 @@ References: [Textract input retention and opt-out](https://aws.amazon.com/textra
 
 ## Validation and release checks
 
+Local browser check: localhost:5173 accepts the supplied test-driver login, loads the existing profile/impact/leaderboard and displays the expected transit backend-update message with the old main outputs. No image was uploaded and live OCR/review is still unverified. Fixed duplicate React keys on the report/transit panels found during this check. Six focused local transit logic tests pass.
+
 48 tests pass: existing ride/auth/AQI/rewards plus metadata extraction, date boundaries, per-user partitioning, points, threshold, compiled schema authorization, reports and synthesized metadata-table/IAM configuration. Lint and frontend TypeScript/Vite production build pass. Backend checking reports only missing generated `$amplify/env/*` modules; actual OCR/DynamoDB transactions and full backend deployment are not verified here. The map bundle retains a size warning. npm install reports dependency advisories; no broad dependency upgrade was attempted.
 
 - Same user/same ticket twice: one claim/reward/count increment. Same metadata/different user: no cross-user duplicate rejection. Repeat after normalized labels and unchanged number. Distinct ticket numbers remain separate.
