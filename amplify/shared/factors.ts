@@ -31,6 +31,10 @@ export const FUEL_PRICE_PER_UNIT: Record<string, Record<string, number>> = {
 
 export const DEFAULT_MILEAGE_KMPL = 15;
 
+// TODO: indicative kg CO2/passenger-km; verify India operator-specific sources
+// before enabling automatic transit approval or presenting measured savings.
+export const TRANSIT_FACTORS = { METRO: 0.03, BUS: 0.05 } as const;
+
 /**
  * Email domain -> organisation.
  * TODO: placeholder organisations, replace with real ones.

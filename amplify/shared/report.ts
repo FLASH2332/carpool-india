@@ -15,14 +15,14 @@ const csvCell = (value: string | number) => {
 
 /**
  * One-row monthly summary for an organisation. Km and CO2 are summed over
- * RIDER entries only, because a driver's entry repeats their riders' figures.
+ * RIDER and TRANSIT entries, because a driver's entry repeats their riders' figures.
  */
 export function buildOrgReportCsv(
   orgName: string,
   month: string,
   entries: ReportEntry[],
 ): string {
-  const riderEntries = entries.filter((e) => e.role === 'RIDER');
+  const riderEntries = entries.filter((e) => e.role === 'RIDER' || e.role === 'TRANSIT');
   const sum = (pick: (e: ReportEntry) => number | null | undefined) =>
     round2(riderEntries.reduce((total, e) => total + (pick(e) ?? 0), 0));
 
@@ -34,6 +34,7 @@ export function buildOrgReportCsv(
     'km_shared',
     'kg_co2_avoided',
     'cars_kept_off_road',
+    'transit_journeys',
   ];
   const row = [
     orgName,
@@ -42,7 +43,8 @@ export function buildOrgReportCsv(
     new Set(entries.map((e) => e.tripId).filter(Boolean)).size,
     sum((e) => e.kmShared),
     sum((e) => e.kgCO2),
-    riderEntries.length, // each rider-trip is a car that stayed home
+    riderEntries.length, // each rider/transit journey substitutes a solo vehicle journey
+    entries.filter(e => e.role === 'TRANSIT').length,
   ];
   return `${header.join(',')}\r\n${row.map(csvCell).join(',')}\r\n`;
 }

@@ -14,6 +14,11 @@ import { storage } from './storage/resource';
 import { createDraftTrip } from './functions/create-draft-trip/resource';
 import { updateTripLocation } from './functions/update-trip-location/resource';
 import { communityLeaderboard } from './functions/community-leaderboard/resource';
+import { transitClaims } from './functions/transit-claims/resource';
+import { transitCleanup } from './functions/transit-cleanup/resource';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ArnFormat, Stack } from 'aws-cdk-lib';
+import { createTransitMetadataTable } from './transit-table';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -34,6 +39,8 @@ const backend = defineBackend({
   createDraftTrip,
   updateTripLocation,
   communityLeaderboard,
+  transitClaims,
+  transitCleanup,
 });
 
 // Sandbox deploys use CloudFormation Express mode, which fails any update to the
@@ -64,3 +71,25 @@ tripTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem'
 const requestTable = backend.data.resources.tables['RideRequest'];
 backend.respondToRequest.addEnvironment('REQUEST_TABLE_NAME', requestTable.tableName);
 requestTable.grant(backend.respondToRequest.resources.lambda, 'dynamodb:UpdateItem');
+
+// New ephemeral metadata only: no image bucket, backups or raw OCR text.
+// APIs deny expired records immediately; sweeper deletes them, TTL is fallback.
+const transitStack = Stack.of(backend.transitClaims.resources.lambda);
+const transitTable = createTransitMetadataTable(transitStack);
+backend.transitClaims.addEnvironment('TRANSIT_TABLE_NAME', transitTable.tableName);
+backend.transitCleanup.addEnvironment('TRANSIT_TABLE_NAME', transitTable.tableName);
+transitTable.grant(backend.transitClaims.resources.lambda, 'dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:PutItem', 'dynamodb:UpdateItem');
+transitTable.grant(backend.transitCleanup.resources.lambda, 'dynamodb:Query', 'dynamodb:DeleteItem');
+const impactTable = backend.data.resources.tables['ImpactEntry'];
+const profileTable = backend.data.resources.tables['UserProfile'];
+backend.transitClaims.addEnvironment('IMPACT_TABLE_NAME', impactTable.tableName);
+backend.transitClaims.addEnvironment('PROFILE_TABLE_NAME', profileTable.tableName);
+impactTable.grant(backend.transitClaims.resources.lambda, 'dynamodb:PutItem');
+profileTable.grant(backend.transitClaims.resources.lambda, 'dynamodb:UpdateItem');
+backend.transitClaims.resources.lambda.addToRolePolicy(new PolicyStatement({ actions: ['textract:DetectDocumentText'], resources: ['*'] })); // Synchronous OCR has no resource-level ARN.
+const stack = Stack.of(transitTable);
+if (process.env.TRANSIT_PLACE_INDEX) backend.transitClaims.resources.lambda.addToRolePolicy(new PolicyStatement({ actions: ['geo:SearchPlaceIndexForText'], resources: [stack.formatArn({ service: 'geo', resource: 'place-index', resourceName: process.env.TRANSIT_PLACE_INDEX, arnFormat: ArnFormat.SLASH_RESOURCE_NAME })] }));
+if (process.env.TRANSIT_ROUTE_CALCULATOR) backend.transitClaims.resources.lambda.addToRolePolicy(new PolicyStatement({ actions: ['geo:CalculateRoute'], resources: [stack.formatArn({ service: 'geo', resource: 'route-calculator', resourceName: process.env.TRANSIT_ROUTE_CALCULATOR, arnFormat: ArnFormat.SLASH_RESOURCE_NAME })] }));
+// Ticket bytes must not enter AppSync field/context logs. Lambda handlers also
+// deliberately do not log events, OCR responses or ticket metadata.
+backend.data.resources.cfnResources.cfnGraphqlApi.addPropertyDeletionOverride('LogConfig');

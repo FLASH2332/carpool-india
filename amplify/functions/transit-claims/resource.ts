@@ -1,0 +1,2 @@
+import { defineFunction } from '@aws-amplify/backend';
+export const transitClaims = defineFunction({ name: 'transit-claims', entry: './handler.ts', timeoutSeconds: 30, resourceGroupName: 'data', environment: { TRANSIT_AUTO_APPROVE: process.env.TRANSIT_AUTO_APPROVE ?? 'false', TRANSIT_OCR_OPT_OUT_CONFIRMED: process.env.TRANSIT_OCR_OPT_OUT_CONFIRMED ?? 'false', TRANSIT_PLACE_INDEX: process.env.TRANSIT_PLACE_INDEX ?? '', TRANSIT_ROUTE_CALCULATOR: process.env.TRANSIT_ROUTE_CALCULATOR ?? '' } });

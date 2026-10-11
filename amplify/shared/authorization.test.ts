@@ -49,3 +49,13 @@ test('discovery schema omits live positions/membership; scoped query accepts no 
   assert.ok(query);
   assert.deepEqual(query.arguments?.map(a => a.name.value), ['month']);
 });
+test('transit exposes scoped functions only, never a directly readable ticket model', () => {
+  const type = object('TransitClaim');
+  assert.ok(!type.directives?.some(d => d.name.value === 'model'));
+  const submit = object('Mutation').fields?.find(f => f.name.value === 'submitTransitClaim');
+  const review = object('Mutation').fields?.find(f => f.name.value === 'reviewTransitClaim');
+  const list = object('Query').fields?.find(f => f.name.value === 'transitClaimsToday');
+  assert.deepEqual(submit?.arguments?.map(a => a.name.value), ['imageBase64']);
+  assert.deepEqual(list?.arguments?.map(a => a.name.value), ['reviewQueue']);
+  assert.ok(review); assert.deepEqual(rules(review).map(r => r.groups), [['OrgAdmins']]);
+});

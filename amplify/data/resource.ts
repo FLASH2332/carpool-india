@@ -11,6 +11,7 @@ import { startTrip } from '../functions/start-trip/resource';
 import { createDraftTrip } from '../functions/create-draft-trip/resource';
 import { updateTripLocation } from '../functions/update-trip-location/resource';
 import { communityLeaderboard } from '../functions/community-leaderboard/resource';
+import { transitClaims } from '../functions/transit-claims/resource';
 
 /**
  * Authorization conventions:
@@ -45,6 +46,10 @@ const tripFields = () => ({ ...discoveryFields(), lastLat: a.float(), lastLng: a
 
 
 export const schema = a.schema({
+  TransitClaim: a.customType({ id: a.string().required(), userId: a.id().required(), orgId: a.id().required(), date: a.string().required(), mode: a.string().required(), from: a.string().required(), to: a.string().required(), ticket: a.string().required(), time: a.string().required(), confidence: a.float().required(), expiresAt: a.integer().required(), status: a.string().required(), km: a.float().required(), kgCO2: a.float().required(), points: a.integer().required(), badAir: a.boolean().required(), reason: a.string().required() }),
+  submitTransitClaim: a.mutation().arguments({ imageBase64: a.string().required() }).returns(a.ref('TransitClaim')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(transitClaims)),
+  transitClaimsToday: a.query().arguments({ reviewQueue: a.boolean() }).returns(a.ref('TransitClaim').array()).authorization(allow => [allow.authenticated()]).handler(a.handler.function(transitClaims)),
+  reviewTransitClaim: a.mutation().arguments({ userId: a.id().required(), claimId: a.string().required(), approve: a.boolean().required(), verifiedKm: a.float(), note: a.string().required() }).returns(a.ref('TransitClaim')).authorization(allow => [allow.group('OrgAdmins')]).handler(a.handler.function(transitClaims)),
   Organization: a
     .model({
       domain: a.string().required(),
@@ -163,7 +168,7 @@ export const schema = a.schema({
       orgId: a.id(),
       tripId: a.id(),
       month: a.string(), // YYYY-MM
-      role: a.enum(['DRIVER', 'RIDER']),
+      role: a.enum(['DRIVER', 'RIDER', 'TRANSIT']),
       kmShared: a.float(),
       kgCO2: a.float(),
       rupees: a.float(),
@@ -342,6 +347,7 @@ export const schema = a.schema({
 })
   .authorization((allow) => [
     allow.resource(setOrgAdmin),
+    allow.resource(transitClaims).to(['query']),
     allow.resource(createDraftTrip),
     allow.resource(updateTripLocation),
     allow.resource(communityLeaderboard),

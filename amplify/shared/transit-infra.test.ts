@@ -1,0 +1,21 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { App, Stack } from 'aws-cdk-lib';
+import { Template } from 'aws-cdk-lib/assertions';
+import { Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { createTransitMetadataTable } from '../transit-table';
+test('transit storage synthesizes TTL, expiry/review indexes and scoped query grants without image storage', () => {
+  const stack = new Stack(new App(), 'TransitRetentionTest');
+  const table = createTransitMetadataTable(stack);
+  const role = new Role(stack, 'Processor', { assumedBy: new ServicePrincipal('lambda.amazonaws.com') });
+  table.grant(role, 'dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:PutItem');
+  const template = Template.fromStack(stack);
+  template.resourceCountIs('AWS::S3::Bucket', 0);
+  template.hasResourceProperties('AWS::DynamoDB::Table', { BillingMode: 'PAY_PER_REQUEST', TimeToLiveSpecification: { AttributeName: 'expiresAt', Enabled: true } });
+  const resource = Object.values(template.findResources('AWS::DynamoDB::Table'))[0];
+  assert.equal(resource.DeletionPolicy, 'Delete');
+  assert.equal(resource.Properties.PointInTimeRecoverySpecification, undefined);
+  assert.deepEqual(resource.Properties.GlobalSecondaryIndexes.map((i: { IndexName: string }) => i.IndexName).sort(), ['expiry', 'review']);
+  const policies = JSON.stringify(template.findResources('AWS::IAM::Policy'));
+  assert.ok(policies.includes('index/*'), 'Query permissions include the scoped table indexes');
+});

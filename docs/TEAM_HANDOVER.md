@@ -2,6 +2,14 @@
 
 Updated 11 October 2026 for Flash / JD (FLASH2332) and WinterSun / Ashwin (WinterSun23). Replaces the earlier handover.
 
+## Transit idea implementation — new branch
+
+`kapil/transit-claims` starts from `platform-admin-dashboard` at `53c616a`. It implements ticket extraction without image storage, user-specific day-only duplicate metadata, conditional reward transactions, My Impact upload/status and scoped organisation review. It is not merged into main or deployed. See [TRANSIT_CLAIMS.md](TRANSIT_CLAIMS.md) for retention limits, configuration and release tests.
+
+The requested base already supplies map/autocomplete components, AQI infrastructure, admin report download, platform admin UI and the previous participant-access source changes. Earlier statements below about these UI/source items being absent are historical; their live end-to-end deployment remains to be verified.
+
+Flash/JD: review/deploy the transit backend in the existing environment, verify Textract privacy opt-out, cleanup and transactions, and regenerate outputs. Ashwin: validate transit factors and distance methodology before automatic approval. Kapil/integration: run the documented authenticated UI/lifecycle checks against fresh outputs before releasing the frontend. The old main outputs build existing rides but lack transit operations (and setOrgAdmin), so transit stays disabled with that file. All 48 tests, lint and frontend build pass; full backend checking still needs generated environment declarations. Keep the current live demo available.
+
 ## Kapil's delivered work
 
 - React frontend and rewards on kapil/react-frontend in [draft PR #1](https://github.com/FLASH2332/carpool-india/pull/1); not merged into main.

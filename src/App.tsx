@@ -34,6 +34,7 @@ import {
 import { Rewards } from "./RewardsPanel";
 import { AdminReport } from "./AdminReport";
 import { PlatformAdmin } from "./PlatformAdmin";
+import { TransitPanel } from "./TransitPanel";
 import { FindCloud, OfferCloud, TripMap } from "./CloudRides";
 import "./App.css";
 
@@ -1402,6 +1403,7 @@ export default function App() {
               </div>
               <Rewards store={store} userId={userId} demo={mode === "demo"} kgCO2={totals.co2} orgId={profile?.orgId} />
               {mode === "cloud" && <AdminReport key={userId} />}
+              {mode === "cloud" && <TransitPanel key={userId} eligible={Boolean(profile && profile.vehicleType !== 'NONE')} onRefresh={reload} />}
               <section className="panel impact-history">
                 <h2>Your journey so far</h2>
                 {myImpact.length ? (
@@ -1411,7 +1413,7 @@ export default function App() {
                       <div>
                         <b>
                           {store.trips.find((t) => t.id === i.tripId)
-                            ?.endLabel || "Shared commute"}
+                            ?.endLabel || (i.role === 'TRANSIT' ? "Public transport journey" : "Shared commute")}
                         </b>
                         <small>
                           {i.month} · {i.role.toLowerCase()} ·{" "}

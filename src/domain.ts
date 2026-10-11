@@ -59,7 +59,7 @@ export type Impact = {
   kgCO2: number;
   rupees: number;
   points: number;
-  role: "RIDER" | "DRIVER";
+  role: "RIDER" | "DRIVER" | "TRANSIT";
 };
 export type Aqi = {
   city: string;

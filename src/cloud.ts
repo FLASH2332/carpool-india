@@ -195,6 +195,7 @@ export async function listOrganisations(): Promise<OrgAdmins[]> {
 }
 /** Adds or removes one organisation admin. PlatformAdmins only. */
 export async function setOrgAdmin(orgId: string, email: string, isAdmin: boolean) {
+  if (!('setOrgAdmin' in outputs.data.model_introspection.mutations)) throw Error('Organisation admin management needs fresh Amplify outputs from the platform-admin backend deployment.');
   const org = checked(await client.mutations.setOrgAdmin({ orgId, email, isAdmin }));
   if (!org) throw Error("The change was not confirmed. Refresh and try again.");
   return toOrgAdmins(org);
